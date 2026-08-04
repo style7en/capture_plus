@@ -14,6 +14,7 @@ namespace CapturePlus;
 public partial class App : Application
 {
     private static Mutex? _singleMutex;
+    private static bool _ownsMutex;
     private TrayIcon? _tray;
     private HotkeyManager? _hotkey;
     private ScreenshotSession? _session;
@@ -25,6 +26,7 @@ public partial class App : Application
         base.OnStartup(e);
 
         _singleMutex = new Mutex(true, "Global\\CapturePlus_SingleInstance", out bool isNew);
+        _ownsMutex = isNew;
         if (!isNew)
         {
             System.Windows.MessageBox.Show("CapturePlus 已在后台运行。", "CapturePlus",
@@ -77,7 +79,7 @@ public partial class App : Application
     {
         _hotkey?.Dispose();
         _tray?.Dispose();
-        _singleMutex?.ReleaseMutex();
+        if (_ownsMutex) _singleMutex?.ReleaseMutex();
         _singleMutex?.Dispose();
         base.OnExit(e);
     }
