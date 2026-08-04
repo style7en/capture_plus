@@ -19,7 +19,7 @@ public partial class App : Application
     private HotkeyManager? _hotkey;
     private ScreenshotSession? _session;
 
-    public static AppSettings CurrentSettings { get; private set; } = new();
+    public static AppSettings CurrentSettings { get; set; } = new();
 
     public string SaveDir => CurrentSettings.SaveDir;
 
