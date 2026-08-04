@@ -40,6 +40,7 @@ public partial class App : Application
         CurrentSettings = AppSettingsService.Load();
 
         _tray = new TrayIcon();
+        Features.TrayIconAdapter.OnShowBalloon = (msg, ms) => _tray.ShowBalloon(msg, ms);
         _tray.ScreenshotRequested += (_, _) => StartScreenshot();
         _tray.SettingsRequested += (_, _) => OpenSettings();
         _tray.ExitRequested += (_, _) => ShutdownGracefully();
