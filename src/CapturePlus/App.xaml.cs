@@ -21,6 +21,8 @@ public partial class App : Application
 
     public static AppSettings CurrentSettings { get; private set; } = new();
 
+    public string SaveDir => CurrentSettings.SaveDir;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
