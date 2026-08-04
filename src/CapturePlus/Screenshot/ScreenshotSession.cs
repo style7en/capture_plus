@@ -42,7 +42,6 @@ public sealed class ScreenshotSession
                 slice, sc.Bounds.X, sc.Bounds.Y, sc.Bounds.Width, sc.Bounds.Height);
 
             overlay.ActionRequested += (crop, action) => OnAction(crop, action);
-            overlay.Cancelled += () => Decrement();
             overlay.Closed += (_, _) => Decrement();
 
             overlay.Show();
