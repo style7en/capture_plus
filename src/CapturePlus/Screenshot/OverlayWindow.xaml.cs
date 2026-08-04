@@ -31,6 +31,7 @@ public partial class OverlayWindow : Window
         _source = source;
         _screenLeft = left; _screenTop = top; _screenW = w; _screenH = h;
         Left = left; Top = top; Width = w; Height = h;
+        Closed += (_, _) => _source.Dispose();
 
         BgImage.Source = ToBitmapSource(source);
         BgImage.Width = w; BgImage.Height = h;

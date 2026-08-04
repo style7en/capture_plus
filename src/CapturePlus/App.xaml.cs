@@ -18,6 +18,7 @@ public partial class App : Application
     private TrayIcon? _tray;
     private HotkeyManager? _hotkey;
     private ScreenshotSession? _session;
+    private SettingsWindow? _settingsWindow;
 
     public static AppSettings CurrentSettings { get; set; } = new();
 
@@ -66,9 +67,15 @@ public partial class App : Application
 
     private void OpenSettings()
     {
-        var w = new SettingsWindow();
-        w.Show();
-        w.Activate();
+        if (_settingsWindow != null)
+        {
+            _settingsWindow.Activate();
+            return;
+        }
+        _settingsWindow = new SettingsWindow();
+        _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+        _settingsWindow.Show();
+        _settingsWindow.Activate();
     }
 
     private void ShutdownGracefully()

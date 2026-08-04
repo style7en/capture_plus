@@ -46,6 +46,8 @@ public sealed class ScreenshotSession
 
             overlay.Show();
         }
+
+        full.Dispose();
     }
 
     private void Decrement()

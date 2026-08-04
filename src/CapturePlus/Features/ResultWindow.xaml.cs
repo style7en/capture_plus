@@ -9,6 +9,7 @@ public partial class ResultWindow : Window
 {
     private static readonly AiService Ai = new();
     private CancellationTokenSource? _cts;
+    private Func<Task>? _retryAction;
 
     private ResultWindow(string title)
     {
@@ -56,9 +57,7 @@ public partial class ResultWindow : Window
                 {
                     SetError("系统 OCR 未识别到文字。可点“用 AI 重新提取”。");
                     RetryBtn.Content = "用 AI 重新提取";
-                    RetryBtn.Visibility = Visibility.Visible;
-                    RetryBtn.Click -= OnRetry;
-                    RetryBtn.Click += async (_, _) => await RunOcrAsync(bmp, useSystem: false);
+                    _retryAction = () => RunOcrAsync(bmp, useSystem: false);
                     return;
                 }
             }
@@ -67,12 +66,14 @@ public partial class ResultWindow : Window
                 text = await Ai.AiOcrAsync(bmp, App.CurrentSettings, _cts.Token);
                 if (string.IsNullOrWhiteSpace(text)) text = "AI 未提取到文字。";
             }
+            _retryAction = () => RunOcrAsync(bmp, useSystem);
             SetResult(text);
         }
         catch (OperationCanceledException) { Close(); }
         catch (Exception ex)
         {
             Logger.Error("OCR result window failed", ex);
+            _retryAction = () => RunOcrAsync(bmp, useSystem);
             SetError($"识别失败：{ex.Message}");
         }
     }
@@ -84,12 +85,14 @@ public partial class ResultWindow : Window
         try
         {
             var text = await Ai.AnalyzeAsync(bmp, App.CurrentSettings, _cts.Token);
+            _retryAction = () => RunAiAsync(bmp);
             SetResult(string.IsNullOrWhiteSpace(text) ? "（AI 未返回内容）" : text);
         }
         catch (OperationCanceledException) { Close(); }
         catch (Exception ex)
         {
             Logger.Error("AI analysis failed", ex);
+            _retryAction = () => RunAiAsync(bmp);
             SetError($"AI 分析失败：{ex.Message}");
         }
     }
@@ -107,12 +110,14 @@ public partial class ResultWindow : Window
                 return;
             }
             var translated = await Ai.TranslateAsync(ocrText, App.CurrentSettings, _cts.Token);
+            _retryAction = () => RunTranslateAsync(bmp);
             SetResult(translated);
         }
         catch (OperationCanceledException) { Close(); }
         catch (Exception ex)
         {
             Logger.Error("Translate failed", ex);
+            _retryAction = () => RunTranslateAsync(bmp);
             SetError($"翻译失败：{ex.Message}");
         }
     }
@@ -121,6 +126,7 @@ public partial class ResultWindow : Window
     {
         ContentBox.Foreground = System.Windows.Media.Brushes.Gray;
         ContentBox.Text = msg;
+        _retryAction = null;
         RetryBtn.Visibility = Visibility.Collapsed;
     }
 
@@ -146,7 +152,7 @@ public partial class ResultWindow : Window
 
     private void OnRetry(object sender, RoutedEventArgs e)
     {
-        // Default retry: re-run AI analysis. OCR has its own retry handler swap.
+        if (_retryAction is not null) _ = _retryAction();
     }
 
     private void OnClose(object sender, RoutedEventArgs e) => Close();
