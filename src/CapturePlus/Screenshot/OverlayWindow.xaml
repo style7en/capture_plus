@@ -1,0 +1,48 @@
+<Window x:Class="CapturePlus.Screenshot.OverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="" WindowStyle="None" ResizeMode="NoResize"
+        ShowInTaskbar="False" Topmost="True"
+        WindowStartupLocation="Manual"
+        Background="Transparent" AllowsTransparency="True"
+        Cursor="Cross" KeyDown="OnKeyDown">
+    <Window.Resources>
+        <Style x:Key="TbBtn" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#FF3F3F46"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <Canvas x:Name="Root">
+        <Image x:Name="BgImage" Stretch="None"/>
+        <Path x:Name="MaskPath" Fill="#80000000"/>
+        <Border x:Name="SelBorder" BorderBrush="White" BorderThickness="2" Background="Transparent"/>
+        <Border x:Name="Toolbar" Background="#FF2D2D30" CornerRadius="4"
+                Padding="6" BorderBrush="#FF555555" BorderThickness="1" Visibility="Collapsed">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="复制图片" Margin="2,0" Click="OnCopy" Style="{StaticResource TbBtn}"/>
+                <Button Content="保存图片" Margin="2,0" Click="OnSave" Style="{StaticResource TbBtn}"/>
+                <Button Content="提取文字" Margin="2,0" Click="OnOcr" Style="{StaticResource TbBtn}"/>
+                <Button Content="AI分析" Margin="2,0" Click="OnAi" Style="{StaticResource TbBtn}"/>
+                <Button Content="翻译" Margin="2,0" Click="OnTranslate" Style="{StaticResource TbBtn}"/>
+                <Button Content="✕" Margin="6,0,0,0" Click="OnCancel" Width="28" Style="{StaticResource TbBtn}"/>
+            </StackPanel>
+        </Border>
+    </Canvas>
+</Window>
