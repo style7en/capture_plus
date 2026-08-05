@@ -8,15 +8,15 @@ Windows 截图增强工具。常驻通知栏，按 `Ctrl+Alt+A` 呼出截图，�
 |---|---|
 | **复制图片** | 选区位图复制到剪贴板 |
 | **保存图片** | 弹出保存对话框，支持 PNG / JPEG / BMP |
-| **提取文字** | 系统 OCR（`Windows.Media.Ocr`），识别为空时可用 AI 重新提取 |
-| **AI 分析** | 一键分析截图内容，提炼要点（需配置 API） |
+| **提取文字** | AI 视觉模型识别截图中的全部文字（需配置 API） |
+| **AI 分析** | 一键分析截图；若图中包含提问，直接给出答案（需配置 API） |
 | **翻译** | 先 OCR 再翻译为目标语言（需配置 API） |
 
 ## 快速开始
 
 ### 环境要求
 
-- Windows 10 1903+ / Windows 11（需 WinRT OCR 支持）
+- Windows 10 1903+ / Windows 11
 - .NET 8 Desktop Runtime（[下载](https://dotnet.microsoft.com/download/dotnet/8.0)）
 - 开发构建需 .NET 8 SDK
 
@@ -50,7 +50,7 @@ dotnet publish src/CapturePlus -c Release -r win-x64 -p:PublishSingleFile=true -
 3. **框选**：鼠标拖拽选区，松开后浮出工具条。
 4. **操作**：点击工具条上的按钮执行对应功能。
 5. **取消**：按 `Esc` 或点工具条上的 ✕。
-6. **设置**：右键托盘 → 设置，配置 AI 服务、OCR 语言、翻译目标语言、保存目录。
+6. **设置**：右键托盘 → 设置，配置 AI 服务、翻译目标语言、保存目录。
 7. **退出**：右键托盘 → 退出。
 
 ### AI 服务配置
@@ -61,15 +61,10 @@ dotnet publish src/CapturePlus -c Release -r win-x64 -p:PublishSingleFile=true -
 |---|---|---|
 | BaseUrl | API 地址 | `https://api.openai.com/v1` |
 | ApiKey | 密钥（可点眼睛图标切换显示） | 空 |
-| 视觉模型 | 用于 AI 分析和 AI OCR | `gpt-4o` |
+| 视觉模型 | 用于 AI 分析、提取文字（OCR）、翻译中的识别 | `gpt-4o` |
 | 文本模型 | 用于翻译 | `gpt-4o-mini` |
 
 支持任何兼容 OpenAI `/chat/completions` 接口的服务商（DeepSeek、通义千问、Ollama 等），填入对应的 BaseUrl 和模型名即可。点"测试连接"验证配置。
-
-### OCR 语言
-
-下拉列表从系统已安装的 OCR 语言包中动态读取。中文识别需在 Windows 设置中安装"OCR 中文语言包"：
-- Win11：设置 → 时间和语言 → 语言和区域 → 添加语言 → 中文 → 选项 → OCR
 
 ### 数据存储
 
@@ -81,7 +76,7 @@ dotnet publish src/CapturePlus -c Release -r win-x64 -p:PublishSingleFile=true -
 ## 技术栈
 
 - **C# .NET 8**（WPF + WinForms NotifyIcon）
-- **Windows.Media.Ocr**（系统 OCR，WinRT）
+- **AI 视觉模型**（OpenAI 兼容 API，OCR / 分析 / 翻译）
 - **System.Drawing**（屏幕截图）
 - **HttpClient**（OpenAI 兼容 API）
 - **xUnit**（纯逻辑单元测试）
@@ -92,9 +87,6 @@ dotnet publish src/CapturePlus -c Release -r win-x64 -p:PublishSingleFile=true -
 
 ```
 capture-plus/
-├─ docs/superpowers/
-│   ├─ specs/   — 设计文档
-│   └─ plans/   — 实现计划
 ├─ src/CapturePlus/
 │   ├─ Core/        — 纯逻辑（可单元测试，零 UI 依赖）
 │   ├─ Logging/     — 日志
@@ -114,7 +106,7 @@ capture-plus/
 dotnet test
 ```
 
-覆盖 `Core/` 全部纯逻辑：配置序列化、选区归一化、工具条定位、文件名生成、密钥脱敏、提示词构造、OCR 文本拼接。
+覆盖 `Core/` 全部纯逻辑：配置序列化、选区归一化、工具条定位、文件名生成、密钥脱敏、提示词构造。
 
 ## 快捷键
 
@@ -125,4 +117,4 @@ dotnet test
 
 ## 许可证
 
-私有项目，未开源。
+[MIT](LICENSE)
