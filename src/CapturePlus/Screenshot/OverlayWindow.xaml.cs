@@ -54,19 +54,9 @@ public partial class OverlayWindow : Window
 
     private void SetupImage()
     {
-        var src = ToBitmapSource(_source);
-        Logger.Info($"BitmapSource: pixelW={src.PixelWidth}, pixelH={src.PixelHeight}, dpiX={src.DpiX}, dpiY={src.DpiY}");
-
-        // Debug: save slice to temp file
-        try
-        {
-            var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"captureplus_debug_{_physW}x{_physH}.png");
-            _source.Save(debugPath, System.Drawing.Imaging.ImageFormat.Png);
-            Logger.Info($"Debug slice saved to: {debugPath}");
-        }
-        catch (Exception ex) { Logger.Warn($"Failed to save debug slice: {ex.Message}"); }
-
-        BgBrush.ImageSource = src;
+        BgBrush.ImageSource = ToBitmapSource(_source, _dpiScale);
+        BgBrush.Stretch = Stretch.None;
+        Logger.Info($"ImageBrush: source={_source.Width}x{_source.Height}, dpiScale={_dpiScale}, stretch=None");
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
@@ -86,30 +76,29 @@ public partial class OverlayWindow : Window
         UpdateMask(null);
     }
 
-    protected override void OnContentRendered(EventArgs e)
+    private static BitmapSource ToBitmapSource(Bitmap bmp, double dpiScale)
     {
-        base.OnContentRendered(e);
-        Logger.Info($"OverlayWindow Rendered: ActualSize={ActualWidth}x{ActualHeight}, expected={_screenW}x{_screenH}");
-    }
-
-    private static BitmapSource ToBitmapSource(Bitmap bmp)
-    {
-        var hBitmap = bmp.GetHbitmap();
+        var rect = new Rectangle(0, 0, bmp.Width, bmp.Height);
+        var data = bmp.LockBits(rect, ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
         try
         {
-            var src = Imaging.CreateBitmapSourceFromHBitmap(
-                hBitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+            double dpi = 96.0 * dpiScale;
+            var src = BitmapSource.Create(
+                bmp.Width, bmp.Height,
+                dpi, dpi,
+                PixelFormats.Bgra32,
+                null,
+                data.Scan0,
+                data.Stride * bmp.Height,
+                data.Stride);
             src.Freeze();
             return src;
         }
         finally
         {
-            DeleteObject(hBitmap);
+            bmp.UnlockBits(data);
         }
     }
-
-    [DllImport("gdi32.dll")]
-    private static extern bool DeleteObject(IntPtr hObject);
 
     private void OnKeyDown(object sender, KeyEventArgs e)
     {
