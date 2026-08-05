@@ -16,6 +16,9 @@ public static class DpiHelper
     [DllImport("user32.dll")]
     private static extern uint GetDpiForSystem();
 
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hwnd);
+
     public static double SystemScale => GetDpiForSystem() / 96.0;
 
     public static double GetScaleForRect(int x, int y, int w, int h)
@@ -30,5 +33,11 @@ public static class DpiHelper
             return dpiX / 96.0;
         }
         catch { return SystemScale; }
+    }
+
+    public static double GetDpiScaleForWindow(IntPtr hwnd)
+    {
+        uint dpi = GetDpiForWindow(hwnd);
+        return dpi > 0 ? dpi / 96.0 : 1.0;
     }
 }
