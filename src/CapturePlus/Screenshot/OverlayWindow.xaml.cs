@@ -53,7 +53,9 @@ public partial class OverlayWindow : Window
 
     private void SetupImage()
     {
-        BgImage.Source = ToDisplayBitmap(_source, _dpiScale);
+        BgImage.Source = ToBitmapSource(_source);
+        BgImage.Width = _screenW;
+        BgImage.Height = _screenH;
         Canvas.SetLeft(BgImage, 0);
         Canvas.SetTop(BgImage, 0);
     }
@@ -75,38 +77,24 @@ public partial class OverlayWindow : Window
         UpdateMask(null);
     }
 
-    private static BitmapSource ToDisplayBitmap(Bitmap bmp, double dpiScale)
+    private static BitmapSource ToBitmapSource(Bitmap bmp)
     {
-        int dipW = (int)Math.Round(bmp.Width / dpiScale);
-        int dipH = (int)Math.Round(bmp.Height / dpiScale);
-
-        using var scaled = new Bitmap(dipW, dipH, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-        using (var g = Graphics.FromImage(scaled))
-        {
-            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-            g.DrawImage(bmp, 0, 0, dipW, dipH);
-        }
-
-        var rect = new Rectangle(0, 0, dipW, dipH);
-        var data = scaled.LockBits(rect, ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        var hBitmap = bmp.GetHbitmap();
         try
         {
-            var src = BitmapSource.Create(
-                dipW, dipH,
-                96, 96,
-                PixelFormats.Bgra32,
-                null,
-                data.Scan0,
-                data.Stride * dipH,
-                data.Stride);
+            var src = Imaging.CreateBitmapSourceFromHBitmap(
+                hBitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
             src.Freeze();
             return src;
         }
         finally
         {
-            scaled.UnlockBits(data);
+            DeleteObject(hBitmap);
         }
     }
+
+    [DllImport("gdi32.dll")]
+    private static extern bool DeleteObject(IntPtr hObject);
 
     private void OnKeyDown(object sender, KeyEventArgs e)
     {
