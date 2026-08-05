@@ -18,9 +18,8 @@ namespace CapturePlus.Screenshot;
 public partial class OverlayWindow : Window
 {
     private readonly Bitmap _source;
-    private readonly double _physLeft, _physTop, _physW, _physH;
-    private double _dpiScale = 1.0;
-    private double _screenW, _screenH;
+    private readonly double _dpiScale;
+    private readonly double _screenW, _screenH;
     private Point? _start;
     private NormRect _current;
     private bool _locked;
@@ -28,34 +27,20 @@ public partial class OverlayWindow : Window
     public event Action<Bitmap, ScreenshotAction>? ActionRequested;
     public event Action? Cancelled;
 
-    [DllImport("user32.dll")]
-    private static extern uint GetDpiForWindow(IntPtr hwnd);
-
-    public OverlayWindow(Bitmap source, double physLeft, double physTop, double physW, double physH)
+    public OverlayWindow(Bitmap source, double dipX, double dipY, double dipW, double dipH, double dpiScale)
     {
         InitializeComponent();
         _source = source;
-        _physLeft = physLeft; _physTop = physTop; _physW = physW; _physH = physH;
-        Left = physLeft; Top = physTop;
-        Width = physW; Height = physH;
+        _dpiScale = dpiScale;
+        _screenW = dipW;
+        _screenH = dipH;
+        Left = dipX; Top = dipY;
+        Width = dipW; Height = dipH;
         Closed += (_, _) => _source.Dispose();
-        SourceInitialized += OnSourceInitialized;
-    }
 
-    private void OnSourceInitialized(object? sender, EventArgs e)
-    {
-        var hwnd = new WindowInteropHelper(this).Handle;
-        uint dpi = GetDpiForWindow(hwnd);
-        _dpiScale = dpi > 0 ? dpi / 96.0 : 1.0;
-
-        _screenW = _physW / _dpiScale;
-        _screenH = _physH / _dpiScale;
-        Width = _screenW;
-        Height = _screenH;
-
-        BgImage.Source = ToBitmapSource(_source);
-        BgImage.Width = _screenW;
-        BgImage.Height = _screenH;
+        BgImage.Source = ToBitmapSource(source);
+        BgImage.Width = dipW;
+        BgImage.Height = dipH;
         Canvas.SetLeft(BgImage, 0);
         Canvas.SetTop(BgImage, 0);
 

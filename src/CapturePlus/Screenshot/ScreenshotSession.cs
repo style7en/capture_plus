@@ -31,8 +31,13 @@ public sealed class ScreenshotSession
         _activeOverlays = screens.Length;
         _overlays.Clear();
 
+        double primaryScale = DpiHelper.SystemScale;
+        Logger.Info($"ScreenshotSession: primaryScale={primaryScale}, screens={screens.Length}, virtualScreen={virtualBounds}");
+
         foreach (var sc in screens)
         {
+            double monitorScale = DpiHelper.GetScaleForRect(sc.Bounds.X, sc.Bounds.Y, sc.Bounds.Width, sc.Bounds.Height);
+
             var local = new Rectangle(
                 sc.Bounds.X - virtualBounds.X,
                 sc.Bounds.Y - virtualBounds.Y,
@@ -40,12 +45,14 @@ public sealed class ScreenshotSession
                 sc.Bounds.Height);
             Bitmap slice = ScreenCapturer.Crop(full, new NormRect(local.X, local.Y, local.Width, local.Height));
 
-            var overlay = new OverlayWindow(
-                slice,
-                sc.Bounds.X,
-                sc.Bounds.Y,
-                sc.Bounds.Width,
-                sc.Bounds.Height);
+            double dipX = sc.Bounds.X / primaryScale;
+            double dipY = sc.Bounds.Y / primaryScale;
+            double dipW = sc.Bounds.Width / monitorScale;
+            double dipH = sc.Bounds.Height / monitorScale;
+
+            Logger.Info($"  screen: phys=({sc.Bounds.X},{sc.Bounds.Y},{sc.Bounds.Width},{sc.Bounds.Height}) monitorScale={monitorScale} dip=({dipX},{dipY},{dipW},{dipH})");
+
+            var overlay = new OverlayWindow(slice, dipX, dipY, dipW, dipH, monitorScale);
 
             overlay.ActionRequested += (crop, action) =>
             {
