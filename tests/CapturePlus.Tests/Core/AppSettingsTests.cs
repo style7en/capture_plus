@@ -16,7 +16,6 @@ public class AppSettingsTests
         Assert.Equal("gpt-4o", s.Api.VisionModel);
         Assert.Equal("gpt-4o-mini", s.Api.TextModel);
         Assert.Equal("中文（简体）", s.TranslateTargetLanguage);
-        Assert.Equal("zh-CN", s.OcrLanguage);
         Assert.Equal("", s.SaveDir);
     }
 
@@ -28,7 +27,6 @@ public class AppSettingsTests
         s.Api.BaseUrl = "https://api.deepseek.com/v1";
         s.Api.VisionModel = "deepseek-chat";
         s.TranslateTargetLanguage = "English";
-        s.OcrLanguage = "en-US";
         s.SaveDir = @"D:\Shots";
 
         var json = AppSettings.ToJson(s);
@@ -38,7 +36,6 @@ public class AppSettingsTests
         Assert.Equal("https://api.deepseek.com/v1", back.Api.BaseUrl);
         Assert.Equal("deepseek-chat", back.Api.VisionModel);
         Assert.Equal("English", back.TranslateTargetLanguage);
-        Assert.Equal("en-US", back.OcrLanguage);
         Assert.Equal(@"D:\Shots", back.SaveDir);
     }
 

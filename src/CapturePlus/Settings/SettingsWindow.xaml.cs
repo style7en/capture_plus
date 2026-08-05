@@ -3,7 +3,6 @@ using System.Windows.Controls;
 using CapturePlus.Core;
 using CapturePlus.Features;
 using CapturePlus.Logging;
-using Windows.Media.Ocr;
 using Button = System.Windows.Controls.Button;
 
 namespace CapturePlus.Settings;
@@ -29,14 +28,6 @@ public partial class SettingsWindow : Window
         VisionModelBox.Text = _local.Api.VisionModel;
         TextModelBox.Text = _local.Api.TextModel;
         SaveDirBox.Text = _local.SaveDir;
-
-        try
-        {
-            OcrLangBox.ItemsSource = OcrEngine.AvailableRecognizerLanguages
-                .Select(l => l.LanguageTag).ToList();
-        }
-        catch (Exception ex) { Logger.Warn($"Could not list OCR languages: {ex.Message}"); }
-        OcrLangBox.SelectedItem = _local.OcrLanguage;
 
         TranslateLangBox.ItemsSource = new[]
         {
@@ -92,7 +83,6 @@ public partial class SettingsWindow : Window
         s.Api.ApiKey = string.IsNullOrEmpty(ApiKeyPwd.Password) ? ApiKeyBox.Text : ApiKeyPwd.Password;
         s.Api.VisionModel = VisionModelBox.Text.Trim();
         s.Api.TextModel = TextModelBox.Text.Trim();
-        s.OcrLanguage = OcrLangBox.SelectedItem as string ?? "zh-CN";
         s.TranslateTargetLanguage = TranslateLangBox.Text;
         s.SaveDir = SaveDirBox.Text.Trim();
     }

@@ -8,7 +8,6 @@ public sealed class AppSettings
     public string Hotkey { get; set; } = "Ctrl+Alt+A";
     public ApiSettings Api { get; set; } = new();
     public string TranslateTargetLanguage { get; set; } = "中文（简体）";
-    public string OcrLanguage { get; set; } = "zh-CN";
     public string SaveDir { get; set; } = "";
 
     public static AppSettings Default => new();
@@ -34,7 +33,6 @@ public sealed class AppSettings
             if (parsed.Api.VisionModel is null) parsed.Api.VisionModel = Default.Api.VisionModel;
             if (parsed.Api.TextModel is null) parsed.Api.TextModel = Default.Api.TextModel;
             if (parsed.TranslateTargetLanguage is null) parsed.TranslateTargetLanguage = Default.TranslateTargetLanguage;
-            if (parsed.OcrLanguage is null) parsed.OcrLanguage = Default.OcrLanguage;
             if (parsed.SaveDir is null) parsed.SaveDir = "";
             return parsed;
         }

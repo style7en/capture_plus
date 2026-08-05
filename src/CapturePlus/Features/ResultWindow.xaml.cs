@@ -23,7 +23,7 @@ public partial class ResultWindow : Window
         var w = new ResultWindow("提取文字");
         w.Show();
         w.RetryBtn.Visibility = Visibility.Collapsed;
-        _ = w.RunOcrAsync(bmp, useSystem: true);
+        _ = w.RunOcrAsync(bmp);
         return w;
     }
 
@@ -43,37 +43,22 @@ public partial class ResultWindow : Window
         return w;
     }
 
-    private async Task RunOcrAsync(Bitmap bmp, bool useSystem)
+    private async Task RunOcrAsync(Bitmap bmp)
     {
         _cts = new CancellationTokenSource();
         SetLoading("正在识别文字…");
         try
         {
-            string text;
-            if (useSystem)
-            {
-                text = await OcrService.RecognizeAsync(bmp, App.CurrentSettings.OcrLanguage);
-                if (string.IsNullOrWhiteSpace(text))
-                {
-                    SetError("系统 OCR 未识别到文字。可点“用 AI 重新提取”。");
-                    RetryBtn.Content = "用 AI 重新提取";
-                    _retryAction = () => RunOcrAsync(bmp, useSystem: false);
-                    return;
-                }
-            }
-            else
-            {
-                text = await Ai.AiOcrAsync(bmp, App.CurrentSettings, _cts.Token);
-                if (string.IsNullOrWhiteSpace(text)) text = "AI 未提取到文字。";
-            }
-            _retryAction = () => RunOcrAsync(bmp, useSystem);
+            var text = await Ai.AiOcrAsync(bmp, App.CurrentSettings, _cts.Token);
+            if (string.IsNullOrWhiteSpace(text)) text = "AI 未提取到文字。";
+            _retryAction = () => RunOcrAsync(bmp);
             SetResult(text);
         }
         catch (OperationCanceledException) { Close(); }
         catch (Exception ex)
         {
             Logger.Error("OCR result window failed", ex);
-            _retryAction = () => RunOcrAsync(bmp, useSystem);
+            _retryAction = () => RunOcrAsync(bmp);
             SetError($"识别失败：{ex.Message}");
         }
     }
@@ -103,10 +88,10 @@ public partial class ResultWindow : Window
         SetLoading("正在识别并翻译…");
         try
         {
-            var ocrText = await OcrService.RecognizeAsync(bmp, App.CurrentSettings.OcrLanguage);
+            var ocrText = await Ai.AiOcrAsync(bmp, App.CurrentSettings, _cts.Token);
             if (string.IsNullOrWhiteSpace(ocrText))
             {
-                SetError("未识别到可翻译文字。");
+                SetError("未识别到文字，无法翻译。");
                 return;
             }
             var translated = await Ai.TranslateAsync(ocrText, App.CurrentSettings, _cts.Token);
