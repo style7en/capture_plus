@@ -83,7 +83,7 @@ public static class RectMath
 ### 3.3 OverlayWindow（重写）
 
 - **构造签名不变**：`OverlayWindow(Bitmap slice, double dipX, double dipY, double physW, double physH, double estimatedScale)`。
-- 职责一（输入上报）：`OnMouseLeftButtonDown/Move/Up` 将本地 DIP 坐标换算为物理虚拟坐标 `(monitorBounds.X + localX * scale, monitorBounds.Y + localY * scale)`，通过事件 `SelectionInput(InputPhase, double physX, double physY)` 上报 Session。WPF 隐式捕获使拖拽事件集中在起点窗，但坐标换算到虚拟坐标后跨屏依然正确。
+- 职责一（输入上报）：`OnMouseLeftButtonDown/Move/Up` 将本地 DIP 坐标换算为物理虚拟坐标 `(monitorBounds.X + localX * scale, monitorBounds.Y + localY * scale)`，通过事件 `SelectionInput(InputPhase, double physX, double physY)` 上报 Session。`InputPhase { Begin, Move, End }` 定义于 `Screenshot` 命名空间（Overlay 与 Session 共用）。WPF 隐式捕获使拖拽事件集中在起点窗，但坐标换算到虚拟坐标后跨屏依然正确。
 - 职责二（遮罩绘制）：`RenderSelection(NormRect? sel)` 计算 `sel ∩ 本屏物理矩形` → 转本地 DIP → 更新 `MaskPath` 空洞与 `SelBorder` 位置；`sel` 为 null 或无交集则全屏遮罩。
 - 职责三（工具条）：Session 调用 `ShowToolbar(NormRect localSel)`，本地坐标用 `ToolbarPlacement.Place` 定位后显示。
 - 焦点：`Show()` 后 `Activate()` + `Keyboard.Focus(this)`；Esc 改用 `PreviewKeyDown`。
