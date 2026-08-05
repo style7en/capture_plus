@@ -6,7 +6,7 @@
         WindowStartupLocation="Manual"
         Cursor="Cross" KeyDown="OnKeyDown">
     <Window.Background>
-        <ImageBrush x:Name="BgBrush" Stretch="None"/>
+        <ImageBrush x:Name="BgBrush" Stretch="Uniform"/>
     </Window.Background>
     <Window.Resources>
         <Style x:Key="TbBtn" TargetType="Button">

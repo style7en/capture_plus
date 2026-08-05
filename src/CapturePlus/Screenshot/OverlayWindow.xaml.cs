@@ -1,5 +1,4 @@
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -21,7 +20,7 @@ public partial class OverlayWindow : Window
 {
     private readonly Bitmap _source;
     private readonly double _physW, _physH;
-    private double _dpiScale;
+    private double _dpiScale = 1.0;
     private double _screenW, _screenH;
     private Point? _start;
     private NormRect _current;
@@ -54,9 +53,7 @@ public partial class OverlayWindow : Window
 
     private void SetupImage()
     {
-        BgBrush.ImageSource = ToBitmapSource(_source, _dpiScale);
-        BgBrush.Stretch = Stretch.None;
-        Logger.Info($"ImageBrush: source={_source.Width}x{_source.Height}, dpiScale={_dpiScale}, stretch=None");
+        BgBrush.ImageSource = ToBitmapSource(_source);
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
@@ -76,29 +73,24 @@ public partial class OverlayWindow : Window
         UpdateMask(null);
     }
 
-    private static BitmapSource ToBitmapSource(Bitmap bmp, double dpiScale)
+    private static BitmapSource ToBitmapSource(Bitmap bmp)
     {
-        var rect = new Rectangle(0, 0, bmp.Width, bmp.Height);
-        var data = bmp.LockBits(rect, ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        var hBitmap = bmp.GetHbitmap();
         try
         {
-            double dpi = 96.0 * dpiScale;
-            var src = BitmapSource.Create(
-                bmp.Width, bmp.Height,
-                dpi, dpi,
-                PixelFormats.Bgra32,
-                null,
-                data.Scan0,
-                data.Stride * bmp.Height,
-                data.Stride);
+            var src = Imaging.CreateBitmapSourceFromHBitmap(
+                hBitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
             src.Freeze();
             return src;
         }
         finally
         {
-            bmp.UnlockBits(data);
+            DeleteObject(hBitmap);
         }
     }
+
+    [DllImport("gdi32.dll")]
+    private static extern bool DeleteObject(IntPtr hObject);
 
     private void OnKeyDown(object sender, KeyEventArgs e)
     {
