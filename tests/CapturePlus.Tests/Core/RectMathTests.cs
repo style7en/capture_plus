@@ -96,4 +96,11 @@ public class RectMathTests
         Assert.False(RectMath.Intersects(new NormRect(0, 0, 100, 100), new NormRect(100, 0, 100, 100)));
         Assert.False(RectMath.Intersects(new NormRect(0, 0, 100, 100), new NormRect(0, 100, 100, 100)));
     }
+
+    [Fact]
+    public void Intersects_Overlap_ReturnsTrue()
+    {
+        Assert.True(RectMath.Intersects(new NormRect(0, 0, 100, 100), new NormRect(50, 50, 100, 100)));
+        Assert.True(RectMath.Intersects(new NormRect(50, 50, 100, 100), new NormRect(0, 0, 100, 100)));
+    }
 }
