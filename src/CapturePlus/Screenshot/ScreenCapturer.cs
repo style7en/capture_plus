@@ -6,9 +6,14 @@ using CapturePlus.Logging;
 
 namespace CapturePlus.Screenshot;
 
+public readonly record struct VirtualCapture(Bitmap Bitmap, Rectangle VirtualBounds)
+{
+    public static implicit operator Bitmap(VirtualCapture cap) => cap.Bitmap;
+}
+
 public static class ScreenCapturer
 {
-    public static Bitmap CaptureVirtualScreen()
+    public static VirtualCapture CaptureVirtualScreen()
     {
         var bounds = SystemInformation.VirtualScreen;
         try
@@ -16,7 +21,7 @@ public static class ScreenCapturer
             var bmp = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb);
             using var g = Graphics.FromImage(bmp);
             g.CopyFromScreen(bounds.X, bounds.Y, 0, 0, bmp.Size, CopyPixelOperation.SourceCopy);
-            return bmp;
+            return new VirtualCapture(bmp, bounds);
         }
         catch (Exception ex)
         {
