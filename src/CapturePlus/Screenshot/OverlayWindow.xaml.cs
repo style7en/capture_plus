@@ -36,6 +36,7 @@ public partial class OverlayWindow : Window
         InitializeComponent();
         _source = source;
         _physLeft = physLeft; _physTop = physTop; _physW = physW; _physH = physH;
+        Left = physLeft; Top = physTop;
         Width = physW; Height = physH;
         Closed += (_, _) => _source.Dispose();
         SourceInitialized += OnSourceInitialized;
@@ -49,8 +50,6 @@ public partial class OverlayWindow : Window
 
         _screenW = _physW / _dpiScale;
         _screenH = _physH / _dpiScale;
-        Left = _physLeft / _dpiScale;
-        Top = _physTop / _dpiScale;
         Width = _screenW;
         Height = _screenH;
 
