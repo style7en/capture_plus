@@ -7,7 +7,6 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using CapturePlus.Core;
-using CapturePlus.Logging;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using Point = System.Windows.Point;
@@ -16,26 +15,27 @@ using Size = System.Windows.Size;
 
 namespace CapturePlus.Screenshot;
 
+public enum InputPhase { Begin, Move, End }
+
 public partial class OverlayWindow : Window
 {
     private readonly Bitmap _source;
+    private readonly Rectangle _monitorBounds;
     private readonly double _physW, _physH;
     private double _dpiScale = 1.0;
     private double _screenW, _screenH;
-    private Point? _start;
-    private NormRect _current;
-    private bool _locked;
+    private NormRect? _lastSelection;
 
-    public event Action<Bitmap, ScreenshotAction>? ActionRequested;
+    public event Action<InputPhase, double, double>? SelectionInput;
+    public event Action<ScreenshotAction>? ActionRequested;
     public event Action? Cancelled;
 
-    [DllImport("user32.dll")]
-    private static extern uint GetDpiForWindow(IntPtr hwnd);
-
-    public OverlayWindow(Bitmap source, double dipX, double dipY, double physW, double physH, double estimatedScale)
+    public OverlayWindow(Bitmap source, Rectangle monitorBounds, double dipX, double dipY,
+        double physW, double physH, double estimatedScale)
     {
         InitializeComponent();
         _source = source;
+        _monitorBounds = monitorBounds;
         _physW = physW;
         _physH = physH;
         _dpiScale = estimatedScale;
@@ -48,7 +48,7 @@ public partial class OverlayWindow : Window
         SourceInitialized += OnSourceInitialized;
 
         SetupImage();
-        UpdateMask(null);
+        RenderSelection(null);
     }
 
     private void SetupImage()
@@ -59,18 +59,14 @@ public partial class OverlayWindow : Window
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
         var hwnd = new WindowInteropHelper(this).Handle;
-        uint dpi = GetDpiForWindow(hwnd);
-        if (dpi > 0)
-        {
-            _dpiScale = dpi / 96.0;
-        }
+        _dpiScale = DpiHelper.GetDpiScaleForWindow(hwnd);
 
         _screenW = _physW / _dpiScale;
         _screenH = _physH / _dpiScale;
         Width = _screenW;
         Height = _screenH;
         SetupImage();
-        UpdateMask(null);
+        RenderSelection(_lastSelection);
     }
 
     private static BitmapSource ToBitmapSource(Bitmap bmp)
@@ -92,7 +88,7 @@ public partial class OverlayWindow : Window
     [DllImport("gdi32.dll")]
     private static extern bool DeleteObject(IntPtr hObject);
 
-    private void OnKeyDown(object sender, KeyEventArgs e)
+    private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Escape) OnCancel(sender, e);
     }
@@ -105,39 +101,37 @@ public partial class OverlayWindow : Window
 
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {
-        if (_locked) return;
-        _start = e.GetPosition(this);
-        _current = new NormRect(_start.Value.X, _start.Value.Y, 0, 0);
-        UpdateMask(_current);
+        base.OnMouseLeftButtonDown(e);
+        var p = e.GetPosition(this);
+        SelectionInput?.Invoke(InputPhase.Begin,
+            _monitorBounds.X + p.X * _dpiScale,
+            _monitorBounds.Y + p.Y * _dpiScale);
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
-        if (_start is null || _locked) return;
+        base.OnMouseMove(e);
+        if (Mouse.LeftButton != MouseButtonState.Pressed) return;
         var p = e.GetPosition(this);
-        double x0 = _start.Value.X, y0 = _start.Value.Y;
-        var raw = SelectionNormalizer.Normalize(x0, y0, p.X - x0, p.Y - y0);
-        _current = raw;
-        UpdateMask(raw);
+        SelectionInput?.Invoke(InputPhase.Move,
+            _monitorBounds.X + p.X * _dpiScale,
+            _monitorBounds.Y + p.Y * _dpiScale);
     }
 
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
     {
-        if (_start is null || _locked) return;
-        _locked = true;
-
-        if (!SelectionNormalizer.IsValid(_current.X, _current.Y, _current.Width, _current.Height))
-        {
-            _locked = false;
-            _start = null;
-            UpdateMask(null);
-            return;
-        }
-        ShowToolbar();
+        base.OnMouseLeftButtonUp(e);
+        var p = e.GetPosition(this);
+        SelectionInput?.Invoke(InputPhase.End,
+            _monitorBounds.X + p.X * _dpiScale,
+            _monitorBounds.Y + p.Y * _dpiScale);
     }
 
-    private void UpdateMask(NormRect? sel)
+    public void RenderSelection(NormRect? sel)
     {
+        _lastSelection = sel;
+        NormRect? local = sel.HasValue ? LocalIntersection(sel.Value) : null;
+
         var full = new Rect(0, 0, _screenW, _screenH);
         var geometry = new StreamGeometry();
         using (var ctx = geometry.Open())
@@ -147,10 +141,10 @@ public partial class OverlayWindow : Window
             ctx.LineTo(full.BottomRight, true, true);
             ctx.LineTo(new Point(full.Left, full.Bottom), true, true);
             ctx.LineTo(full.TopLeft, true, true);
-            if (sel.HasValue)
+
+            if (local.HasValue)
             {
-                var s = sel.Value;
-                var r = new Rect(s.X, s.Y, s.Width, s.Height);
+                var r = new Rect(local.Value.X, local.Value.Y, local.Value.Width, local.Value.Height);
                 ctx.BeginFigure(r.TopLeft, true, true);
                 ctx.LineTo(new Point(r.Right, r.Top), true, true);
                 ctx.LineTo(r.BottomRight, true, true);
@@ -160,11 +154,10 @@ public partial class OverlayWindow : Window
         }
         MaskPath.Data = geometry;
 
-        if (sel.HasValue)
+        if (local.HasValue)
         {
-            var s = sel.Value;
-            SelBorder.Width = s.Width; SelBorder.Height = s.Height;
-            Canvas.SetLeft(SelBorder, s.X); Canvas.SetTop(SelBorder, s.Y);
+            SelBorder.Width = local.Value.Width; SelBorder.Height = local.Value.Height;
+            Canvas.SetLeft(SelBorder, local.Value.X); Canvas.SetTop(SelBorder, local.Value.Y);
             SelBorder.Visibility = Visibility.Visible;
         }
         else
@@ -173,7 +166,24 @@ public partial class OverlayWindow : Window
         }
     }
 
-    private void ShowToolbar()
+    public NormRect ToLocalDip(NormRect phys)
+    {
+        return new NormRect(
+            (phys.X - _monitorBounds.X) / _dpiScale,
+            (phys.Y - _monitorBounds.Y) / _dpiScale,
+            phys.Width / _dpiScale,
+            phys.Height / _dpiScale);
+    }
+
+    private NormRect? LocalIntersection(NormRect sel)
+    {
+        var mb = new NormRect(_monitorBounds.X, _monitorBounds.Y, _monitorBounds.Width, _monitorBounds.Height);
+        var inter = RectMath.Intersect(sel, mb);
+        if (inter.Width <= 0 || inter.Height <= 0) return null;
+        return ToLocalDip(inter);
+    }
+
+    public void ShowToolbar(NormRect localSel)
     {
         Toolbar.Visibility = Visibility.Visible;
         Toolbar.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
@@ -181,20 +191,10 @@ public partial class OverlayWindow : Window
         var tw = Toolbar.DesiredSize.Width; var th = Toolbar.DesiredSize.Height;
 
         var pos = ToolbarPlacement.Place(
-            _current.X, _current.Y, _current.Width, _current.Height,
+            localSel.X, localSel.Y, localSel.Width, localSel.Height,
             0, 0, _screenW, _screenH, tw, th, 8);
         Canvas.SetLeft(Toolbar, pos.X);
         Canvas.SetTop(Toolbar, pos.Y);
-    }
-
-    private Bitmap CropCurrent()
-    {
-        var physicalRect = new NormRect(
-            _current.X * _dpiScale,
-            _current.Y * _dpiScale,
-            _current.Width * _dpiScale,
-            _current.Height * _dpiScale);
-        return ScreenCapturer.Crop(_source, physicalRect);
     }
 
     private void OnCopy(object sender, RoutedEventArgs e) => Fire(ScreenshotAction.CopyImage);
@@ -205,8 +205,7 @@ public partial class OverlayWindow : Window
 
     private void Fire(ScreenshotAction action)
     {
-        var crop = CropCurrent();
-        ActionRequested?.Invoke(crop, action);
+        ActionRequested?.Invoke(action);
         Close();
     }
 }
