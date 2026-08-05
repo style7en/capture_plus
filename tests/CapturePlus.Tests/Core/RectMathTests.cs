@@ -69,4 +69,31 @@ public class RectMathTests
     {
         Assert.False(RectMath.Intersects(new NormRect(0, 0, 100, 100), new NormRect(200, 200, 50, 50)));
     }
+
+    [Fact]
+    public void Intersect_EdgeTouching_ReturnsEmpty_WithMaxOrigin()
+    {
+        var r = RectMath.Intersect(new NormRect(0, 0, 100, 100), new NormRect(100, 0, 100, 100));
+        Assert.Equal(100, r.X);
+        Assert.Equal(0, r.Y);
+        Assert.Equal(0, r.Width);
+        Assert.Equal(100, r.Height);
+    }
+
+    [Fact]
+    public void Intersect_EdgeTouching_Horizontal_ReturnsEmpty()
+    {
+        var r = RectMath.Intersect(new NormRect(0, 0, 100, 100), new NormRect(0, 100, 100, 100));
+        Assert.Equal(0, r.X);
+        Assert.Equal(100, r.Y);
+        Assert.Equal(100, r.Width);
+        Assert.Equal(0, r.Height);
+    }
+
+    [Fact]
+    public void Intersects_EdgeTouching_ReturnsFalse()
+    {
+        Assert.False(RectMath.Intersects(new NormRect(0, 0, 100, 100), new NormRect(100, 0, 100, 100)));
+        Assert.False(RectMath.Intersects(new NormRect(0, 0, 100, 100), new NormRect(0, 100, 100, 100)));
+    }
 }

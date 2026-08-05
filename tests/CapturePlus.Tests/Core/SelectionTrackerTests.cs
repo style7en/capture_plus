@@ -86,4 +86,38 @@ public class SelectionTrackerTests
         Assert.False(t.IsLocked);
         Assert.Equal(0, t.Rect.Width);
     }
+
+    [Fact]
+    public void Begin_WhileLocked_Ignored()
+    {
+        var t = new SelectionTracker();
+        t.Begin(0, 0);
+        t.Update(100, 100);
+        Assert.True(t.End());
+        t.Begin(200, 200);
+        Assert.True(t.IsLocked);
+        Assert.False(t.IsDragging);
+        Assert.Equal(0, t.Rect.X);
+        Assert.Equal(100, t.Rect.Width);
+    }
+
+    [Fact]
+    public void End_BeforeBegin_ReturnsFalse()
+    {
+        var t = new SelectionTracker();
+        Assert.False(t.End());
+        Assert.False(t.IsDragging);
+        Assert.False(t.IsLocked);
+    }
+
+    [Fact]
+    public void End_WhileLocked_ReturnsFalse()
+    {
+        var t = new SelectionTracker();
+        t.Begin(0, 0);
+        t.Update(100, 100);
+        Assert.True(t.End());
+        Assert.False(t.End());
+        Assert.True(t.IsLocked);
+    }
 }
