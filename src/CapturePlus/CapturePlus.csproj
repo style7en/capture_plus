@@ -10,9 +10,11 @@
     <NoWarn>$(NoWarn);WFAC010</NoWarn>
     <RootNamespace>CapturePlus</RootNamespace>
     <AssemblyName>CapturePlus</AssemblyName>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <Version>1.0.0</Version>
   </PropertyGroup>
   <ItemGroup>
+    <Resource Include="Assets\app.ico"/>
     <None Update="Assets\app.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -1,5 +1,4 @@
 using System.Drawing;
-using System.IO;
 using System.Windows.Forms;
 using CapturePlus.Logging;
 
@@ -23,10 +22,9 @@ public sealed class TrayIcon : IDisposable
         };
         try
         {
-            var path = Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico");
-            _notify.Icon = File.Exists(path)
-                ? new Icon(path)
-                : SystemIcons.Application;
+            var info = System.Windows.Application.GetResourceStream(
+                new Uri("pack://application:,,,/Assets/app.ico"));
+            _notify.Icon = new Icon(info.Stream);
         }
         catch (Exception ex)
         {
@@ -48,7 +46,7 @@ public sealed class TrayIcon : IDisposable
 
     public void ShowBalloon(string message, int durationMs = 1500)
     {
-        _notify.ShowBalloonTip(durationMs, "CapturePlus", message, ToolTipIcon.Info);
+        _notify.ShowBalloonTip(durationMs, "CapturePlus", message, ToolTipIcon.None);
     }
 
     private void OnAbout()
