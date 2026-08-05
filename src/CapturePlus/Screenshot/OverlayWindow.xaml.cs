@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -46,49 +47,57 @@ public partial class OverlayWindow : Window
         Closed += (_, _) => _source.Dispose();
         SourceInitialized += OnSourceInitialized;
 
-        BgImage.Source = ToBitmapSource(source);
-        BgImage.Width = _screenW;
-        BgImage.Height = _screenH;
+        SetupImage();
+        UpdateMask(null);
+    }
+
+    private void SetupImage()
+    {
+        BgImage.Source = ToBitmapSource(_source, _dpiScale);
         Canvas.SetLeft(BgImage, 0);
         Canvas.SetTop(BgImage, 0);
-        UpdateMask(null);
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
         var hwnd = new WindowInteropHelper(this).Handle;
         uint dpi = GetDpiForWindow(hwnd);
-        if (dpi > 0 && dpi / 96.0 != _dpiScale)
+        if (dpi > 0)
         {
             _dpiScale = dpi / 96.0;
-            _screenW = _physW / _dpiScale;
-            _screenH = _physH / _dpiScale;
-            Width = _screenW;
-            Height = _screenH;
-            BgImage.Width = _screenW;
-            BgImage.Height = _screenH;
-            UpdateMask(null);
         }
+
+        _screenW = _physW / _dpiScale;
+        _screenH = _physH / _dpiScale;
+        Width = _screenW;
+        Height = _screenH;
+        SetupImage();
+        UpdateMask(null);
     }
 
-    private static BitmapSource ToBitmapSource(Bitmap bmp)
+    private static BitmapSource ToBitmapSource(Bitmap bmp, double dpiScale)
     {
-        var hBitmap = bmp.GetHbitmap();
+        var rect = new Rectangle(0, 0, bmp.Width, bmp.Height);
+        var data = bmp.LockBits(rect, ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
         try
         {
-            var src = Imaging.CreateBitmapSourceFromHBitmap(
-                hBitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+            double dpi = 96.0 * dpiScale;
+            var src = BitmapSource.Create(
+                bmp.Width, bmp.Height,
+                dpi, dpi,
+                PixelFormats.Bgra32,
+                null,
+                data.Scan0,
+                data.Stride * bmp.Height,
+                data.Stride);
             src.Freeze();
             return src;
         }
         finally
         {
-            DeleteObject(hBitmap);
+            bmp.UnlockBits(data);
         }
     }
-
-    [DllImport("gdi32.dll")]
-    private static extern bool DeleteObject(IntPtr hObject);
 
     private void OnKeyDown(object sender, KeyEventArgs e)
     {
