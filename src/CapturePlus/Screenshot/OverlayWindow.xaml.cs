@@ -54,7 +54,19 @@ public partial class OverlayWindow : Window
 
     private void SetupImage()
     {
-        BgBrush.ImageSource = ToBitmapSource(_source);
+        var src = ToBitmapSource(_source);
+        Logger.Info($"BitmapSource: pixelW={src.PixelWidth}, pixelH={src.PixelHeight}, dpiX={src.DpiX}, dpiY={src.DpiY}");
+
+        // Debug: save slice to temp file
+        try
+        {
+            var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"captureplus_debug_{_physW}x{_physH}.png");
+            _source.Save(debugPath, System.Drawing.Imaging.ImageFormat.Png);
+            Logger.Info($"Debug slice saved to: {debugPath}");
+        }
+        catch (Exception ex) { Logger.Warn($"Failed to save debug slice: {ex.Message}"); }
+
+        BgBrush.ImageSource = src;
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
