@@ -6,7 +6,9 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using CapturePlus.Core;
+using CapturePlus.Logging;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using Point = System.Windows.Point;
@@ -25,6 +27,12 @@ public partial class OverlayWindow : Window
     private double _dpiScale = 1.0;
     private double _screenW, _screenH;
     private NormRect? _lastSelection;
+    private HwndSource? _hwndSource;
+
+    private const int WM_DPICHANGED = 0x02E0;
+    private const uint SWP_NOZORDER = 0x0004;
+    private const uint SWP_NOACTIVATE = 0x0010;
+    private const uint SWP_NOOWNERZORDER = 0x0200;
 
     public event Action<InputPhase, double, double>? SelectionInput;
     public event Action<ScreenshotAction>? ActionRequested;
@@ -58,15 +66,42 @@ public partial class OverlayWindow : Window
 
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
-        var hwnd = new WindowInteropHelper(this).Handle;
-        _dpiScale = DpiHelper.GetDpiScaleForWindow(hwnd);
-
-        _screenW = _physW / _dpiScale;
-        _screenH = _physH / _dpiScale;
-        Width = _screenW;
-        Height = _screenH;
+        _hwndSource = (HwndSource)PresentationSource.FromVisual(this);
+        _hwndSource.AddHook(WndProc);
+        ApplyGeometry();
         SetupImage();
         RenderSelection(_lastSelection);
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == WM_DPICHANGED)
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Render, ApplyGeometry);
+        }
+        return IntPtr.Zero;
+    }
+
+    private void ApplyGeometry()
+    {
+        var hwnd = _hwndSource!.Handle;
+        SetWindowPos(hwnd, IntPtr.Zero,
+            _monitorBounds.X, _monitorBounds.Y, _monitorBounds.Width, _monitorBounds.Height,
+            SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+
+        _dpiScale = VisualTreeHelper.GetDpi(this).DpiScaleX;
+        if (_dpiScale <= 0) _dpiScale = 1.0;
+
+        _screenW = _monitorBounds.Width / _dpiScale;
+        _screenH = _monitorBounds.Height / _dpiScale;
+        Width = _screenW;
+        Height = _screenH;
+
+        var r = default(RECT);
+        GetWindowRect(hwnd, ref r);
+        Logger.Info($"  overlay geometry: dpiX={_dpiScale:F3} " +
+            $"phys=({r.Left},{r.Top},{r.Right - r.Left}x{r.Bottom - r.Top}) " +
+            $"expect=({_monitorBounds.X},{_monitorBounds.Y},{_monitorBounds.Width}x{_monitorBounds.Height})");
     }
 
     private static BitmapSource ToBitmapSource(Bitmap bmp)
@@ -87,6 +122,16 @@ public partial class OverlayWindow : Window
 
     [DllImport("gdi32.dll")]
     private static extern bool DeleteObject(IntPtr hObject);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
+        int x, int y, int cx, int cy, uint uFlags);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(IntPtr hWnd, ref RECT lpRect);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT { public int Left, Top, Right, Bottom; }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {

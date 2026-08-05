@@ -19,6 +19,25 @@ public static class DpiHelper
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(IntPtr hwnd);
 
+    [DllImport("shcore.dll")]
+    private static extern int GetProcessDpiAwareness(IntPtr hprocess, out int awareness);
+
+    public static string ProcessAwareness
+    {
+        get
+        {
+            int awareness = -1;
+            if (GetProcessDpiAwareness(IntPtr.Zero, out awareness) != 0) return $"error:{awareness}";
+            return awareness switch
+            {
+                0 => "unaware",
+                1 => "SystemAware",
+                2 => "PerMonitor",
+                _ => $"unknown:{awareness}",
+            };
+        }
+    }
+
     public static double SystemScale => GetDpiForSystem() / 96.0;
 
     public static double GetScaleForRect(int x, int y, int w, int h)

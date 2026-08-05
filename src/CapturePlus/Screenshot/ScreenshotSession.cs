@@ -14,6 +14,7 @@ public sealed class ScreenshotSession
     private readonly List<OverlayWindow> _overlays = new();
     private readonly List<OverlayInfo> _infos = new();
     private Bitmap? _full;
+    private Rectangle _virtualBounds;
     private readonly SelectionTracker _tracker = new();
 
     private sealed record OverlayInfo(OverlayWindow Window, Rectangle Bounds);
@@ -38,9 +39,10 @@ public sealed class ScreenshotSession
             }
 
             _full = cap.Bitmap;
+            _virtualBounds = cap.VirtualBounds;
             var screens = Screen.AllScreens;
             double primaryScale = DpiHelper.SystemScale;
-            Logger.Info($"ScreenshotSession: primaryScale={primaryScale}, screens={screens.Length}, virtualScreen={cap.VirtualBounds}");
+            Logger.Info($"ScreenshotSession: awareness={DpiHelper.ProcessAwareness}, primaryScale={primaryScale}, screens={screens.Length}, virtualScreen={cap.VirtualBounds}");
 
             _openCount = 0;
             foreach (var sc in screens)
@@ -54,8 +56,8 @@ public sealed class ScreenshotSession
                     sc.Bounds.Height);
                 Bitmap slice = ScreenCapturer.Crop(_full, new NormRect(local.X, local.Y, local.Width, local.Height));
 
-                double dipX = sc.Bounds.X / primaryScale;
-                double dipY = sc.Bounds.Y / primaryScale;
+                double dipX = sc.Bounds.X / monitorScale;
+                double dipY = sc.Bounds.Y / monitorScale;
 
                 Logger.Info($"  screen: phys=({sc.Bounds.X},{sc.Bounds.Y},{sc.Bounds.Width},{sc.Bounds.Height}) primaryScale={primaryScale} monitorScale={monitorScale} dipPos=({dipX},{dipY})");
 
@@ -70,6 +72,9 @@ public sealed class ScreenshotSession
                 overlay.Show();
                 overlay.Activate();
                 _openCount++;
+
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(overlay).Handle;
+                Logger.Info($"  overlay ready: hwndDpiScale={DpiHelper.GetDpiScaleForWindow(hwnd):F3} winDIP=({overlay.Width:F1},{overlay.Height:F1}) winDIPPos=({overlay.Left:F1},{overlay.Top:F1}) phys=({sc.Bounds.Width}x{sc.Bounds.Height}) slice=({slice.Width}x{slice.Height})");
             }
 
             if (_overlays.Count == 0) EndSession();
@@ -120,7 +125,12 @@ public sealed class ScreenshotSession
     {
         try
         {
-            var crop = ScreenCapturer.Crop(_full!, _tracker.Rect);
+            var cropRect = new NormRect(
+                _tracker.Rect.X - _virtualBounds.X,
+                _tracker.Rect.Y - _virtualBounds.Y,
+                _tracker.Rect.Width,
+                _tracker.Rect.Height);
+            var crop = ScreenCapturer.Crop(_full!, cropRect);
             switch (action)
             {
                 case ScreenshotAction.CopyImage:
