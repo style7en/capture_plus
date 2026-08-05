@@ -8,6 +8,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using CapturePlus.Core;
+using CapturePlus.Logging;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using Point = System.Windows.Point;
@@ -53,11 +54,7 @@ public partial class OverlayWindow : Window
 
     private void SetupImage()
     {
-        BgImage.Source = ToBitmapSource(_source);
-        BgImage.Width = _screenW;
-        BgImage.Height = _screenH;
-        Canvas.SetLeft(BgImage, 0);
-        Canvas.SetTop(BgImage, 0);
+        BgBrush.ImageSource = ToBitmapSource(_source);
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
@@ -75,6 +72,12 @@ public partial class OverlayWindow : Window
         Height = _screenH;
         SetupImage();
         UpdateMask(null);
+    }
+
+    protected override void OnContentRendered(EventArgs e)
+    {
+        base.OnContentRendered(e);
+        Logger.Info($"OverlayWindow Rendered: ActualSize={ActualWidth}x{ActualHeight}, expected={_screenW}x{_screenH}");
     }
 
     private static BitmapSource ToBitmapSource(Bitmap bmp)

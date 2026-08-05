@@ -4,8 +4,10 @@
         Title="" WindowStyle="None" ResizeMode="NoResize"
         ShowInTaskbar="False" Topmost="True"
         WindowStartupLocation="Manual"
-        Background="Black"
         Cursor="Cross" KeyDown="OnKeyDown">
+    <Window.Background>
+        <ImageBrush x:Name="BgBrush" Stretch="Fill"/>
+    </Window.Background>
     <Window.Resources>
         <Style x:Key="TbBtn" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
@@ -30,7 +32,6 @@
         </Style>
     </Window.Resources>
     <Canvas x:Name="Root">
-        <Image x:Name="BgImage" Stretch="Fill"/>
         <Path x:Name="MaskPath" Fill="#80000000"/>
         <Border x:Name="SelBorder" BorderBrush="White" BorderThickness="2" Background="Transparent"/>
         <Border x:Name="Toolbar" Background="#FF2D2D30" CornerRadius="4"
