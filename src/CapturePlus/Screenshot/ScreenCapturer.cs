@@ -6,10 +6,7 @@ using CapturePlus.Logging;
 
 namespace CapturePlus.Screenshot;
 
-public readonly record struct VirtualCapture(Bitmap Bitmap, Rectangle VirtualBounds)
-{
-    public static implicit operator Bitmap(VirtualCapture cap) => cap.Bitmap;
-}
+public readonly record struct VirtualCapture(Bitmap Bitmap, Rectangle VirtualBounds);
 
 public static class ScreenCapturer
 {
