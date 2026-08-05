@@ -10,6 +10,7 @@ namespace CapturePlus.Screenshot;
 public sealed class ScreenshotSession
 {
     private int _activeOverlays;
+    private readonly List<OverlayWindow> _overlays = new();
 
 #pragma warning disable CS1998 // async method lacks await
     public async Task StartAsync()
@@ -28,6 +29,7 @@ public sealed class ScreenshotSession
         var virtualBounds = SystemInformation.VirtualScreen;
         var screens = Screen.AllScreens;
         _activeOverlays = screens.Length;
+        _overlays.Clear();
 
         foreach (var sc in screens)
         {
@@ -48,13 +50,29 @@ public sealed class ScreenshotSession
                 sc.Bounds.Height / scale,
                 scale);
 
-            overlay.ActionRequested += (crop, action) => OnAction(crop, action);
+            overlay.ActionRequested += (crop, action) =>
+            {
+                OnAction(crop, action);
+                CloseAllOverlays();
+            };
+            overlay.Cancelled += () => CloseAllOverlays();
             overlay.Closed += (_, _) => Decrement();
 
+            _overlays.Add(overlay);
             overlay.Show();
         }
 
         full.Dispose();
+    }
+
+    private void CloseAllOverlays()
+    {
+        var toClose = _overlays.ToList();
+        _overlays.Clear();
+        foreach (var o in toClose)
+        {
+            try { o.Close(); } catch { }
+        }
     }
 
     private void Decrement()
