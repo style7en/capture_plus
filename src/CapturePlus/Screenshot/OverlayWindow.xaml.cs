@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -17,8 +18,9 @@ namespace CapturePlus.Screenshot;
 public partial class OverlayWindow : Window
 {
     private readonly Bitmap _source;
-    private readonly double _screenLeft, _screenTop, _screenW, _screenH;
-    private readonly double _dpiScale;
+    private readonly double _physLeft, _physTop, _physW, _physH;
+    private double _dpiScale = 1.0;
+    private double _screenW, _screenH;
     private Point? _start;
     private NormRect _current;
     private bool _locked;
@@ -26,17 +28,35 @@ public partial class OverlayWindow : Window
     public event Action<Bitmap, ScreenshotAction>? ActionRequested;
     public event Action? Cancelled;
 
-    public OverlayWindow(Bitmap source, double left, double top, double w, double h, double dpiScale)
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hwnd);
+
+    public OverlayWindow(Bitmap source, double physLeft, double physTop, double physW, double physH)
     {
         InitializeComponent();
         _source = source;
-        _dpiScale = dpiScale;
-        _screenLeft = left; _screenTop = top; _screenW = w; _screenH = h;
-        Left = left; Top = top; Width = w; Height = h;
+        _physLeft = physLeft; _physTop = physTop; _physW = physW; _physH = physH;
+        Width = physW; Height = physH;
         Closed += (_, _) => _source.Dispose();
+        SourceInitialized += OnSourceInitialized;
+    }
 
-        BgImage.Source = ToBitmapSource(source);
-        BgImage.Width = w; BgImage.Height = h;
+    private void OnSourceInitialized(object? sender, EventArgs e)
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        uint dpi = GetDpiForWindow(hwnd);
+        _dpiScale = dpi > 0 ? dpi / 96.0 : 1.0;
+
+        _screenW = _physW / _dpiScale;
+        _screenH = _physH / _dpiScale;
+        Left = _physLeft / _dpiScale;
+        Top = _physTop / _dpiScale;
+        Width = _screenW;
+        Height = _screenH;
+
+        BgImage.Source = ToBitmapSource(_source);
+        BgImage.Width = _screenW;
+        BgImage.Height = _screenH;
         Canvas.SetLeft(BgImage, 0);
         Canvas.SetTop(BgImage, 0);
 
@@ -59,7 +79,7 @@ public partial class OverlayWindow : Window
         }
     }
 
-    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+    [DllImport("gdi32.dll")]
     private static extern bool DeleteObject(IntPtr hObject);
 
     private void OnKeyDown(object sender, KeyEventArgs e)
