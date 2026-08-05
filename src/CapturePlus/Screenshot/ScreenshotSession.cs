@@ -47,12 +47,10 @@ public sealed class ScreenshotSession
 
             double dipX = sc.Bounds.X / primaryScale;
             double dipY = sc.Bounds.Y / primaryScale;
-            double dipW = sc.Bounds.Width / monitorScale;
-            double dipH = sc.Bounds.Height / monitorScale;
 
-            Logger.Info($"  screen: phys=({sc.Bounds.X},{sc.Bounds.Y},{sc.Bounds.Width},{sc.Bounds.Height}) monitorScale={monitorScale} dip=({dipX},{dipY},{dipW},{dipH})");
+            Logger.Info($"  screen: phys=({sc.Bounds.X},{sc.Bounds.Y},{sc.Bounds.Width},{sc.Bounds.Height}) primaryScale={primaryScale} monitorScale={monitorScale} dipPos=({dipX},{dipY})");
 
-            var overlay = new OverlayWindow(slice, dipX, dipY, dipW, dipH, monitorScale);
+            var overlay = new OverlayWindow(slice, dipX, dipY, sc.Bounds.Width, sc.Bounds.Height, monitorScale);
 
             overlay.ActionRequested += (crop, action) =>
             {

@@ -18,8 +18,9 @@ namespace CapturePlus.Screenshot;
 public partial class OverlayWindow : Window
 {
     private readonly Bitmap _source;
-    private readonly double _dpiScale;
-    private readonly double _screenW, _screenH;
+    private readonly double _physW, _physH;
+    private double _dpiScale;
+    private double _screenW, _screenH;
     private Point? _start;
     private NormRect _current;
     private bool _locked;
@@ -27,24 +28,47 @@ public partial class OverlayWindow : Window
     public event Action<Bitmap, ScreenshotAction>? ActionRequested;
     public event Action? Cancelled;
 
-    public OverlayWindow(Bitmap source, double dipX, double dipY, double dipW, double dipH, double dpiScale)
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hwnd);
+
+    public OverlayWindow(Bitmap source, double dipX, double dipY, double physW, double physH, double estimatedScale)
     {
         InitializeComponent();
         _source = source;
-        _dpiScale = dpiScale;
-        _screenW = dipW;
-        _screenH = dipH;
+        _physW = physW;
+        _physH = physH;
+        _dpiScale = estimatedScale;
+        _screenW = physW / estimatedScale;
+        _screenH = physH / estimatedScale;
+
         Left = dipX; Top = dipY;
-        Width = dipW; Height = dipH;
+        Width = _screenW; Height = _screenH;
         Closed += (_, _) => _source.Dispose();
+        SourceInitialized += OnSourceInitialized;
 
         BgImage.Source = ToBitmapSource(source);
-        BgImage.Width = dipW;
-        BgImage.Height = dipH;
+        BgImage.Width = _screenW;
+        BgImage.Height = _screenH;
         Canvas.SetLeft(BgImage, 0);
         Canvas.SetTop(BgImage, 0);
-
         UpdateMask(null);
+    }
+
+    private void OnSourceInitialized(object? sender, EventArgs e)
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        uint dpi = GetDpiForWindow(hwnd);
+        if (dpi > 0 && dpi / 96.0 != _dpiScale)
+        {
+            _dpiScale = dpi / 96.0;
+            _screenW = _physW / _dpiScale;
+            _screenH = _physH / _dpiScale;
+            Width = _screenW;
+            Height = _screenH;
+            BgImage.Width = _screenW;
+            BgImage.Height = _screenH;
+            UpdateMask(null);
+        }
     }
 
     private static BitmapSource ToBitmapSource(Bitmap bmp)
