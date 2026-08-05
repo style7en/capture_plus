@@ -13,7 +13,7 @@ using CapturePlus.Models;
 
 namespace CapturePlus.Features;
 
-public sealed class AiService : IDisposable
+public sealed class AiService
 {
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(60) };
 
@@ -76,7 +76,7 @@ public sealed class AiService : IDisposable
 
         var parsed = JsonSerializer.Deserialize<ChatResponse>(body);
         var content = parsed?.Choices?.FirstOrDefault()?.Message?.Content;
-        return content ?? "";
+        return content?.Trim() ?? "";
     }
 
     private static string ToBase64Png(Bitmap bmp)
@@ -88,6 +88,4 @@ public sealed class AiService : IDisposable
 
     private static string Truncate(string s, int n)
         => s.Length <= n ? s : s[..n];
-
-    public void Dispose() { /* static Http — not disposed here */ }
 }

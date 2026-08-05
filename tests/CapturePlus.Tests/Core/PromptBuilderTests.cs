@@ -9,7 +9,7 @@ public class PromptBuilderTests
     public void AiAnalysis_ReturnsFixedPrompt()
     {
         var p = PromptBuilder.AiAnalysis();
-        Assert.Contains("分析这张截图的内容", p);
+        Assert.Contains("回答", p);
         Assert.Contains("关键要点", p);
     }
 

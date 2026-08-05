@@ -8,7 +8,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using CapturePlus.Core;
-using CapturePlus.Logging;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using Point = System.Windows.Point;
@@ -23,7 +22,6 @@ public partial class OverlayWindow : Window
 {
     private readonly Bitmap _source;
     private readonly Rectangle _monitorBounds;
-    private readonly double _physW, _physH;
     private double _dpiScale = 1.0;
     private double _screenW, _screenH;
     private NormRect? _lastSelection;
@@ -38,20 +36,11 @@ public partial class OverlayWindow : Window
     public event Action<ScreenshotAction>? ActionRequested;
     public event Action? Cancelled;
 
-    public OverlayWindow(Bitmap source, Rectangle monitorBounds, double dipX, double dipY,
-        double physW, double physH, double estimatedScale)
+    public OverlayWindow(Bitmap source, Rectangle monitorBounds)
     {
         InitializeComponent();
         _source = source;
         _monitorBounds = monitorBounds;
-        _physW = physW;
-        _physH = physH;
-        _dpiScale = estimatedScale;
-        _screenW = physW / estimatedScale;
-        _screenH = physH / estimatedScale;
-
-        Left = dipX; Top = dipY;
-        Width = _screenW; Height = _screenH;
         Closed += (_, _) => _source.Dispose();
         SourceInitialized += OnSourceInitialized;
 
@@ -96,12 +85,6 @@ public partial class OverlayWindow : Window
         _screenH = _monitorBounds.Height / _dpiScale;
         Width = _screenW;
         Height = _screenH;
-
-        var r = default(RECT);
-        GetWindowRect(hwnd, ref r);
-        Logger.Info($"  overlay geometry: dpiX={_dpiScale:F3} " +
-            $"phys=({r.Left},{r.Top},{r.Right - r.Left}x{r.Bottom - r.Top}) " +
-            $"expect=({_monitorBounds.X},{_monitorBounds.Y},{_monitorBounds.Width}x{_monitorBounds.Height})");
     }
 
     private static BitmapSource ToBitmapSource(Bitmap bmp)
@@ -126,12 +109,6 @@ public partial class OverlayWindow : Window
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
         int x, int y, int cx, int cy, uint uFlags);
-
-    [DllImport("user32.dll")]
-    private static extern bool GetWindowRect(IntPtr hWnd, ref RECT lpRect);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct RECT { public int Left, Top, Right, Bottom; }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {

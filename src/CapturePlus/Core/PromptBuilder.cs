@@ -3,7 +3,7 @@ namespace CapturePlus.Core;
 public static class PromptBuilder
 {
     public static string AiAnalysis()
-        => "请分析这张截图的内容，说明图中展示了什么信息，并提炼关键要点。";
+        => "请分析这张截图：如果其中包含提问，请直接回答该问题；否则说明图中展示了什么信息并提炼关键要点。";
 
     public static string Translate(string targetLanguage, string text)
         => $"将以下文本翻译为{targetLanguage}，只输出译文，保留原格式：\n\n{text}";

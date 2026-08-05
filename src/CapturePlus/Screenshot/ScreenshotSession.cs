@@ -41,14 +41,10 @@ public sealed class ScreenshotSession
             _full = cap.Bitmap;
             _virtualBounds = cap.VirtualBounds;
             var screens = Screen.AllScreens;
-            double primaryScale = DpiHelper.SystemScale;
-            Logger.Info($"ScreenshotSession: awareness={DpiHelper.ProcessAwareness}, primaryScale={primaryScale}, screens={screens.Length}, virtualScreen={cap.VirtualBounds}");
 
             _openCount = 0;
             foreach (var sc in screens)
             {
-                double monitorScale = DpiHelper.GetScaleForRect(sc.Bounds.X, sc.Bounds.Y, sc.Bounds.Width, sc.Bounds.Height);
-
                 var local = new Rectangle(
                     sc.Bounds.X - cap.VirtualBounds.X,
                     sc.Bounds.Y - cap.VirtualBounds.Y,
@@ -56,12 +52,7 @@ public sealed class ScreenshotSession
                     sc.Bounds.Height);
                 Bitmap slice = ScreenCapturer.Crop(_full, new NormRect(local.X, local.Y, local.Width, local.Height));
 
-                double dipX = sc.Bounds.X / monitorScale;
-                double dipY = sc.Bounds.Y / monitorScale;
-
-                Logger.Info($"  screen: phys=({sc.Bounds.X},{sc.Bounds.Y},{sc.Bounds.Width},{sc.Bounds.Height}) primaryScale={primaryScale} monitorScale={monitorScale} dipPos=({dipX},{dipY})");
-
-                var overlay = new OverlayWindow(slice, sc.Bounds, dipX, dipY, sc.Bounds.Width, sc.Bounds.Height, monitorScale);
+                var overlay = new OverlayWindow(slice, sc.Bounds);
                 overlay.SelectionInput += (phase, px, py) => OnSelectionInput(phase, px, py);
                 overlay.ActionRequested += OnAction;
                 overlay.Cancelled += CloseAllOverlays;
@@ -72,9 +63,6 @@ public sealed class ScreenshotSession
                 overlay.Show();
                 overlay.Activate();
                 _openCount++;
-
-                var hwnd = new System.Windows.Interop.WindowInteropHelper(overlay).Handle;
-                Logger.Info($"  overlay ready: hwndDpiScale={DpiHelper.GetDpiScaleForWindow(hwnd):F3} winDIP=({overlay.Width:F1},{overlay.Height:F1}) winDIPPos=({overlay.Left:F1},{overlay.Top:F1}) phys=({sc.Bounds.Width}x{sc.Bounds.Height}) slice=({slice.Width}x{slice.Height})");
             }
 
             if (_overlays.Count == 0) EndSession();

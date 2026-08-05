@@ -62,7 +62,7 @@ public partial class SettingsWindow : Window
         btn.Content = "测试中…"; btn.IsEnabled = false;
         try
         {
-            using var ai = new AiService();
+            var ai = new AiService();
             var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             var result = await ai.TranslateAsync("hello", _local, cts.Token);
             System.Windows.MessageBox.Show($"连接成功。模型返回示例：\n{result}", "测试连接",
