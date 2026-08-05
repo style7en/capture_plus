@@ -9,17 +9,15 @@ public static class ToolbarPlacement
         double screenLeft, double screenTop, double screenW, double screenH,
         double toolbarW, double toolbarH, double margin)
     {
-        double x = selX + selW + margin;
-        double y = selY + selH + margin;
+        double x = selX + (selW - toolbarW) / 2;
+        double y = selY - margin - toolbarH;
 
-        if (x + toolbarW > screenLeft + screenW)
-            x = selX - margin - toolbarW;
+        if (y < screenTop + margin)
+            y = selY + selH + margin;
 
-        if (y + toolbarH > screenTop + screenH)
-            y = selY - margin - toolbarH;
-
-        if (x < screenLeft) x = screenLeft + margin;
-        if (y < screenTop) y = screenTop + margin;
+        if (x < screenLeft + margin) x = screenLeft + margin;
+        if (x + toolbarW > screenLeft + screenW - margin)
+            x = screenLeft + screenW - margin - toolbarW;
 
         return new ToolbarPos(x, y);
     }

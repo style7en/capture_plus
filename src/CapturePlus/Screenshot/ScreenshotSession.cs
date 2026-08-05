@@ -31,6 +31,8 @@ public sealed class ScreenshotSession
 
         foreach (var sc in screens)
         {
+            double scale = DpiHelper.GetScaleForRect(sc.Bounds.X, sc.Bounds.Y, sc.Bounds.Width, sc.Bounds.Height);
+
             var local = new Rectangle(
                 sc.Bounds.X - virtualBounds.X,
                 sc.Bounds.Y - virtualBounds.Y,
@@ -39,7 +41,12 @@ public sealed class ScreenshotSession
             Bitmap slice = ScreenCapturer.Crop(full, new NormRect(local.X, local.Y, local.Width, local.Height));
 
             var overlay = new OverlayWindow(
-                slice, sc.Bounds.X, sc.Bounds.Y, sc.Bounds.Width, sc.Bounds.Height);
+                slice,
+                sc.Bounds.X / scale,
+                sc.Bounds.Y / scale,
+                sc.Bounds.Width / scale,
+                sc.Bounds.Height / scale,
+                scale);
 
             overlay.ActionRequested += (crop, action) => OnAction(crop, action);
             overlay.Closed += (_, _) => Decrement();

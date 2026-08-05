@@ -18,6 +18,7 @@ public partial class OverlayWindow : Window
 {
     private readonly Bitmap _source;
     private readonly double _screenLeft, _screenTop, _screenW, _screenH;
+    private readonly double _dpiScale;
     private Point? _start;
     private NormRect _current;
     private bool _locked;
@@ -25,10 +26,11 @@ public partial class OverlayWindow : Window
     public event Action<Bitmap, ScreenshotAction>? ActionRequested;
     public event Action? Cancelled;
 
-    public OverlayWindow(Bitmap source, double left, double top, double w, double h)
+    public OverlayWindow(Bitmap source, double left, double top, double w, double h, double dpiScale)
     {
         InitializeComponent();
         _source = source;
+        _dpiScale = dpiScale;
         _screenLeft = left; _screenTop = top; _screenW = w; _screenH = h;
         Left = left; Top = top; Width = w; Height = h;
         Closed += (_, _) => _source.Dispose();
@@ -157,7 +159,12 @@ public partial class OverlayWindow : Window
 
     private Bitmap CropCurrent()
     {
-        return ScreenCapturer.Crop(_source, _current);
+        var physicalRect = new NormRect(
+            _current.X * _dpiScale,
+            _current.Y * _dpiScale,
+            _current.Width * _dpiScale,
+            _current.Height * _dpiScale);
+        return ScreenCapturer.Crop(_source, physicalRect);
     }
 
     private void OnCopy(object sender, RoutedEventArgs e) => Fire(ScreenshotAction.CopyImage);

@@ -30,7 +30,7 @@
         </Style>
     </Window.Resources>
     <Canvas x:Name="Root">
-        <Image x:Name="BgImage" Stretch="None"/>
+        <Image x:Name="BgImage" Stretch="Fill"/>
         <Path x:Name="MaskPath" Fill="#80000000"/>
         <Border x:Name="SelBorder" BorderBrush="White" BorderThickness="2" Background="Transparent"/>
         <Border x:Name="Toolbar" Background="#FF2D2D30" CornerRadius="4"
