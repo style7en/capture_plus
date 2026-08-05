@@ -153,8 +153,6 @@ public sealed class ScreenshotSession
     private void CloseAllOverlays()
     {
         var toClose = _overlays.ToList();
-        _overlays.Clear();
-        _infos.Clear();
         foreach (var o in toClose)
         {
             try { o.Close(); } catch { }
@@ -170,6 +168,9 @@ public sealed class ScreenshotSession
     private void EndSession()
     {
         _openCount = 0;
+        _overlays.Clear();
+        _infos.Clear();
+        _tracker.Reset();
         var bmp = Interlocked.Exchange(ref _full, null);
         bmp?.Dispose();
         Interlocked.Exchange(ref _busy, 0);
