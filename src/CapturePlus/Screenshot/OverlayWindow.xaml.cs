@@ -53,7 +53,7 @@ public partial class OverlayWindow : Window
 
     private void SetupImage()
     {
-        BgImage.Source = ToBitmapSource(_source, _dpiScale);
+        BgImage.Source = ToDisplayBitmap(_source, _dpiScale);
         Canvas.SetLeft(BgImage, 0);
         Canvas.SetTop(BgImage, 0);
     }
@@ -75,27 +75,36 @@ public partial class OverlayWindow : Window
         UpdateMask(null);
     }
 
-    private static BitmapSource ToBitmapSource(Bitmap bmp, double dpiScale)
+    private static BitmapSource ToDisplayBitmap(Bitmap bmp, double dpiScale)
     {
-        var rect = new Rectangle(0, 0, bmp.Width, bmp.Height);
-        var data = bmp.LockBits(rect, ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        int dipW = (int)Math.Round(bmp.Width / dpiScale);
+        int dipH = (int)Math.Round(bmp.Height / dpiScale);
+
+        using var scaled = new Bitmap(dipW, dipH, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        using (var g = Graphics.FromImage(scaled))
+        {
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            g.DrawImage(bmp, 0, 0, dipW, dipH);
+        }
+
+        var rect = new Rectangle(0, 0, dipW, dipH);
+        var data = scaled.LockBits(rect, ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
         try
         {
-            double dpi = 96.0 * dpiScale;
             var src = BitmapSource.Create(
-                bmp.Width, bmp.Height,
-                dpi, dpi,
+                dipW, dipH,
+                96, 96,
                 PixelFormats.Bgra32,
                 null,
                 data.Scan0,
-                data.Stride * bmp.Height,
+                data.Stride * dipH,
                 data.Stride);
             src.Freeze();
             return src;
         }
         finally
         {
-            bmp.UnlockBits(data);
+            scaled.UnlockBits(data);
         }
     }
 
