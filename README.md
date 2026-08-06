@@ -1,6 +1,6 @@
 # CapturePlus
 
-Windows 截图增强工具。常驻通知栏，按 `Ctrl+Alt+A` 呼出截图，框选后提供五项操作。
+Windows 截图增强工具。常驻通知栏，按快捷键（默认 `Ctrl+Alt+A`，可在设置中更换）呼出截图，框选后提供五项操作。
 
 ## 功能
 
@@ -46,7 +46,7 @@ dotnet publish src/CapturePlus -c Release -r win-x64 -p:PublishSingleFile=true -
 ## 使用说明
 
 1. **启动**：双击 `CapturePlus.exe`，通知栏出现图标，弹出气泡提示。
-2. **截图**：按 `Ctrl+Alt+A`，或双击托盘图标，或右键托盘菜单 → 截图。
+2. **截图**：按全局快捷键（默认 `Ctrl+Alt+A`），或双击托盘图标，或右键托盘菜单 → 截图。
 3. **框选**：鼠标拖拽选区，松开后浮出工具条。
 4. **操作**：点击工具条上的按钮执行对应功能。
 5. **取消**：按 `Esc` 或点工具条上的 ✕。
@@ -112,7 +112,7 @@ dotnet test
 
 | 快捷键 | 功能 |
 |---|---|
-| `Ctrl + Alt + A` | 截图 |
+| `Ctrl + Alt + A` | 截图（可在设置中点击快捷键框并按下新组合键更换，支持 Ctrl/Alt/Shift/Win 组合字母、数字、F1–F12 等） |
 | `Esc` | 取消截图 |
 
 ## 许可证

@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
+using CapturePlus.Core;
 using CapturePlus.Logging;
 
 namespace CapturePlus.Hotkey;
@@ -13,34 +14,68 @@ public sealed class HotkeyManager : IDisposable
     private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
     private const int HotkeyId = 0x9001;
-    private const uint MOD_ALT = 0x0001;
-    private const uint MOD_CONTROL = 0x0002;
-    private const uint VK_A = 0x41;
     private const int WM_HOTKEY = 0x0312;
 
     private HwndSource? _source;
     private bool _registered;
+    private uint _modifiers;
+    private uint _vk;
 
     public event EventHandler? HotkeyPressed;
 
-    public bool Register()
+    public bool Register(string hotkey)
+    {
+        if (!HotkeyParser.TryParse(hotkey, out uint mods, out uint vk))
+        {
+            Logger.Warn($"Invalid hotkey '{hotkey}'. Skipped.");
+            return false;
+        }
+        return Register(mods, vk);
+    }
+
+    public bool ReRegister(string hotkey)
+    {
+        if (!HotkeyParser.TryParse(hotkey, out uint mods, out uint vk))
+        {
+            Logger.Warn($"Invalid hotkey '{hotkey}'.");
+            return false;
+        }
+
+        EnsureSource();
+        if (RegisterHotKey(_source!.Handle, HotkeyId, mods, vk))
+        {
+            _modifiers = mods;
+            _vk = vk;
+            _registered = true;
+            return true;
+        }
+
+        Logger.Warn($"RegisterHotKey failed (win32 error {Marshal.GetLastWin32Error()}). Hotkey may be in use.");
+        if (_registered) RegisterHotKey(_source.Handle, HotkeyId, _modifiers, _vk);
+        return false;
+    }
+
+    public void Unregister()
+    {
+        if (_registered && _source is not null)
+        {
+            UnregisterHotKey(_source.Handle, HotkeyId);
+            _registered = false;
+        }
+    }
+
+    private bool Register(uint mods, uint vk)
     {
         try
         {
-            if (_source is null)
+            EnsureSource();
+            _registered = RegisterHotKey(_source!.Handle, HotkeyId, mods, vk);
+            if (_registered)
             {
-                var p = new HwndSourceParameters("CapturePlusHotkey")
-                {
-                    Width = 0, Height = 0,
-                    PositionX = 0, PositionY = 0,
-                    WindowStyle = 0,
-                };
-                _source = new HwndSource(p);
-                _source.AddHook(WndProc);
+                _modifiers = mods;
+                _vk = vk;
             }
-
-            _registered = RegisterHotKey(_source.Handle, HotkeyId, MOD_CONTROL | MOD_ALT, VK_A);
-            if (!_registered)
+            else
             {
                 var err = Marshal.GetLastWin32Error();
                 Logger.Warn($"RegisterHotKey failed (win32 error {err}). Hotkey may be in use.");
@@ -51,6 +86,21 @@ public sealed class HotkeyManager : IDisposable
         {
             Logger.Error("HotkeyManager.Register failed", ex);
             return false;
+        }
+    }
+
+    private void EnsureSource()
+    {
+        if (_source is null)
+        {
+            var p = new HwndSourceParameters("CapturePlusHotkey")
+            {
+                Width = 0, Height = 0,
+                PositionX = 0, PositionY = 0,
+                WindowStyle = 0,
+            };
+            _source = new HwndSource(p);
+            _source.AddHook(WndProc);
         }
     }
 
@@ -66,11 +116,7 @@ public sealed class HotkeyManager : IDisposable
 
     public void Dispose()
     {
-        if (_registered && _source is not null)
-        {
-            UnregisterHotKey(_source.Handle, HotkeyId);
-            _registered = false;
-        }
+        Unregister();
         _source?.Dispose();
         _source = null;
     }

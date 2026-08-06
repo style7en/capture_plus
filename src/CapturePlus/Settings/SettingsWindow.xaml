@@ -77,7 +77,12 @@
             </Grid>
 
             <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-                <TextBlock x:Name="HotkeyLabel" Text="快捷键: Ctrl+Alt+A" VerticalAlignment="Center" Margin="0,0,16,0" Foreground="Gray"/>
+                <TextBlock Text="快捷键:" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="Gray"/>
+                <TextBox x:Name="HotkeyBox" Width="150" IsReadOnly="True" TextAlignment="Center"
+                         VerticalAlignment="Center" Margin="0,0,4,0" Cursor="Hand"
+                         PreviewMouseDown="OnHotkeyBoxMouseDown" PreviewKeyDown="OnHotkeyBoxKeyDown"/>
+                <TextBlock x:Name="HotkeyHint" Text="点击后按下新组合键" VerticalAlignment="Center"
+                           Margin="0,0,16,0" Foreground="Gray" FontSize="11"/>
                 <Button Content="保存" Padding="16,6" Margin="0,0,8,0" Click="OnSave"/>
                 <Button Content="取消" Padding="16,6" Click="OnCancel"/>
             </StackPanel>

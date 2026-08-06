@@ -47,12 +47,12 @@ public partial class App : Application
         _tray.ScreenshotRequested += (_, _) => StartScreenshot();
         _tray.SettingsRequested += (_, _) => OpenSettings();
         _tray.ExitRequested += (_, _) => ShutdownGracefully();
-        _tray.ShowBalloon("CapturePlus 已启动，按 Ctrl+Alt+A 截图", 1500);
+        _tray.ShowBalloon($"CapturePlus 已启动，按 {CurrentSettings.Hotkey} 截图", 1500);
 
         _hotkey = new HotkeyManager();
         _hotkey.HotkeyPressed += (_, _) => StartScreenshot();
-        bool ok = _hotkey.Register();
-        if (!ok) _tray.ShowBalloon("Ctrl+Alt+A 被占用，请关闭冲突软件（可用托盘菜单截图）", 2500);
+        bool ok = _hotkey.Register(CurrentSettings.Hotkey);
+        if (!ok) _tray.ShowBalloon($"{CurrentSettings.Hotkey} 被占用，请关闭冲突软件或在设置中更换快捷键（可用托盘菜单截图）", 2500);
 
         _session = new ScreenshotSession();
     }
@@ -72,7 +72,7 @@ public partial class App : Application
             _settingsWindow.Activate();
             return;
         }
-        _settingsWindow = new SettingsWindow();
+        _settingsWindow = new SettingsWindow(_hotkey!);
         _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         _settingsWindow.Show();
         _settingsWindow.Activate();
