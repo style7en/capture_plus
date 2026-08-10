@@ -10,17 +10,24 @@ public partial class ResultWindow : Window
     private static readonly AiService Ai = new();
     private CancellationTokenSource? _cts;
     private Func<Task>? _retryAction;
+    private Bitmap? _bitmap;
 
     private ResultWindow(string title)
     {
         InitializeComponent();
         TitleText.Text = title;
-        Closed += (_, _) => _cts?.Cancel();
+        Closed += (_, _) =>
+        {
+            _cts?.Cancel();
+            _bitmap?.Dispose();
+            _bitmap = null;
+        };
     }
 
     public static ResultWindow ShowOcrAsync(Bitmap bmp)
     {
         var w = new ResultWindow("提取文字");
+        w._bitmap = bmp;
         w.Show();
         w.RetryBtn.Visibility = Visibility.Collapsed;
         _ = w.RunOcrAsync(bmp);
@@ -30,6 +37,7 @@ public partial class ResultWindow : Window
     public static ResultWindow ShowAiAnalysisAsync(Bitmap bmp)
     {
         var w = new ResultWindow("AI 分析");
+        w._bitmap = bmp;
         w.Show();
         _ = w.RunAiAsync(bmp);
         return w;
@@ -38,6 +46,7 @@ public partial class ResultWindow : Window
     public static ResultWindow ShowTranslateAsync(Bitmap bmp)
     {
         var w = new ResultWindow($"翻译 → {App.CurrentSettings.TranslateTargetLanguage}");
+        w._bitmap = bmp;
         w.Show();
         _ = w.RunTranslateAsync(bmp);
         return w;
