@@ -27,6 +27,7 @@ private:
     NOTIFYICONDATAW nid_ = {};
     HWND   hwnd_ = nullptr;
     HMENU  menu_ = nullptr;
+    bool   ownsIcon_ = false;
     std::wstring screenshotLabel_ = L"截图";
 
     Callback onScreenshot_;

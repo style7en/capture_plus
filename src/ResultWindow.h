@@ -24,6 +24,10 @@ private:
         HBITMAP bmp = nullptr;
         HWND    hwnd = nullptr;
         std::atomic<bool> closed{ false };
+        std::mutex mtx;
+        bool ready = false;
+        int  kind = 0;
+        std::wstring text;
         ~Shared() { if (bmp) DeleteObject((HGDIOBJ)bmp); }
     };
 

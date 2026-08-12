@@ -33,7 +33,8 @@ TrayIcon::TrayIcon()
     nid_.hIcon  = (HICON)LoadImageW(GetModuleHandleW(nullptr),
                                     MAKEINTRESOURCEW(IDI_APP),
                                     IMAGE_ICON, 0, 0, LR_DEFAULTSIZE);
-    if (!nid_.hIcon) nid_.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+    if (nid_.hIcon) ownsIcon_ = true;
+    else nid_.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
     wcsncpy(nid_.szTip, L"CapturePlus", 127);
 
     Shell_NotifyIconW(NIM_ADD, &nid_);
@@ -42,7 +43,7 @@ TrayIcon::TrayIcon()
 TrayIcon::~TrayIcon()
 {
     Shell_NotifyIconW(NIM_DELETE, &nid_);
-    if (nid_.hIcon) DestroyIcon(nid_.hIcon);
+    if (ownsIcon_ && nid_.hIcon) DestroyIcon(nid_.hIcon);
     if (menu_) DestroyMenu(menu_);
     if (hwnd_) DestroyWindow(hwnd_);
 }
@@ -92,7 +93,7 @@ void TrayIcon::showMenu()
         case 1: if (onScreenshot_) onScreenshot_(); break;
         case 2: if (onSettings_)   onSettings_();   break;
         case 3: MessageBoxW(nullptr,
-            L"CapturePlus v1.02\n\n"
+            L"CapturePlus v1.03\n\n"
             L"Windows 截图增强工具。常驻通知栏，按快捷键呼出截图，框选后提供五项操作：\n\n"
             L"  · 复制图片 — 选区位图复制到剪贴板\n"
             L"  · 保存图片 — 保存为 PNG / JPEG / BMP\n"

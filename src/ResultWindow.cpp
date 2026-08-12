@@ -152,11 +152,15 @@ LRESULT CALLBACK ResultWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
         }
         case WM_APP_AI_RESULT:
         {
-            auto* p = (std::pair<int, std::wstring>*)wp;
-            if (!self) { delete p; return 0; }
-            int kind = p->first;
-            std::wstring text = std::move(p->second);
-            delete p;
+            if (!self) return 0;
+            std::wstring text;
+            int kind = 0;
+            {
+                std::lock_guard<std::mutex> lk(self->state_->mtx);
+                self->state_->ready = false;
+                kind = self->state_->kind;
+                text = std::move(self->state_->text);
+            }
             if (kind == 0)
             {
                 if (self->state_->bmp) { DeleteObject((HGDIOBJ)self->state_->bmp); self->state_->bmp = nullptr; }
@@ -272,7 +276,7 @@ void ResultWindow::runAi()
 
     std::thread([state, mode, target, settings]() {
         struct Guard { ~Guard() { g_inFlightAi.fetch_sub(1); } } guard;
-        std::wstring result;
+        std::wstring text;
         int kind = 0;
         try
         {
@@ -282,19 +286,21 @@ void ResultWindow::runAi()
             else if (mode == Mode::Ai)    r = ai.analyze(state->bmp, settings);
             else                          r = ai.translate(ai.ocr(state->bmp, settings), settings);
             if (r.empty()) r = "（未返回内容）";
-            result = util::ToWide(r);
+            text = util::ToWide(r);
         }
         catch (const std::exception& e)
         {
             kind = 1;
-            result = util::ToWide(std::string("失败：") + e.what());
+            text = util::ToWide(std::string("失败：") + e.what());
             logger::error("AI run failed: " + std::string(e.what()));
         }
-        if (!state->closed.load() && IsWindow(target))
         {
-            auto* p = new std::pair<int, std::wstring>(kind, std::move(result));
-            if (!PostMessageW(target, WM_APP_AI_RESULT, (WPARAM)p, 0))
-                delete p;
+            std::lock_guard<std::mutex> lk(state->mtx);
+            state->ready = true;
+            state->kind = kind;
+            state->text = std::move(text);
         }
+        if (!state->closed.load() && IsWindow(target))
+            PostMessageW(target, WM_APP_AI_RESULT, 0, 0);
     }).detach();
 }
