@@ -30,6 +30,24 @@ HBITMAP CaptureScreenRect(int x, int y, int w, int h)
     return bmp;
 }
 
+HBITMAP CropBitmap(HBITMAP src, int x, int y, int w, int h)
+{
+    if (!src || w <= 0 || h <= 0) return nullptr;
+    HDC screen = GetDC(nullptr);
+    HDC srcDc = CreateCompatibleDC(screen);
+    HBITMAP oldSrc = (HBITMAP)SelectObject(srcDc, src);
+    HDC dstDc = CreateCompatibleDC(screen);
+    HBITMAP result = CreateCompatibleBitmap(screen, w, h);
+    HBITMAP oldDst = (HBITMAP)SelectObject(dstDc, result);
+    BitBlt(dstDc, 0, 0, w, h, srcDc, x, y, SRCCOPY);
+    SelectObject(dstDc, oldDst);
+    SelectObject(srcDc, oldSrc);
+    DeleteDC(dstDc);
+    DeleteDC(srcDc);
+    ReleaseDC(nullptr, screen);
+    return result;
+}
+
 HGLOBAL HBitmapToDibGlobal(HBITMAP hbmp)
 {
     if (!hbmp) return nullptr;

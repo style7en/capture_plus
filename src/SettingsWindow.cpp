@@ -113,7 +113,7 @@ static INT_PTR CALLBACK DlgProc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp)
         {
             switch (LOWORD(wp))
             {
-                case IDC_TEST_BTN:
+                case IDC_TOGGLE_APIKEY_BTN:
                 {
                     HWND e = GetDlgItem(dlg, IDC_APIKEY_EDIT);
                     LONG style = GetWindowLongW(e, GWL_STYLE);
@@ -145,7 +145,9 @@ static INT_PTR CALLBACK DlgProc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp)
                     }
 
                     SaveSettings(*ctx->settings);
-                    if (ctx->hotkey) ctx->hotkey->reRegister(ctx->settings->hotkey);
+                    if (ctx->hotkey && !ctx->hotkey->reRegister(ctx->settings->hotkey))
+                        MessageBoxW(dlg, L"该快捷键被占用，已保留原快捷键。",
+                                    L"CapturePlus", MB_OK | MB_ICONWARNING);
                     if (ctx->tray)
                         ctx->tray->updateMenuLabel(L"截图 (" +
                             util::ToWide(ctx->settings->hotkey) + L")");

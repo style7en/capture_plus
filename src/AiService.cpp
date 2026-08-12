@@ -163,6 +163,8 @@ std::string AiService::httpPost(const std::string& host, int port,
         WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!hSession) throw std::runtime_error("WinHttpOpen failed");
 
+    WinHttpSetTimeouts(hSession, 30000, 30000, 30000, 60000);
+
     hConnect = WinHttpConnect(hSession, whost.c_str(),
         (port ? port : (https ? INTERNET_DEFAULT_HTTPS_PORT : INTERNET_DEFAULT_HTTP_PORT)), 0);
     if (!hConnect) throw std::runtime_error("WinHttpConnect failed");

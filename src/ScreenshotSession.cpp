@@ -1,17 +1,8 @@
 #include "ScreenshotSession.h"
-#include "GdiUtil.h"
 #include "CopyImageService.h"
 #include "SaveImageService.h"
 #include "ResultWindow.h"
-#include "AppSettings.h"
-#include "TrayIcon.h"
 #include "Logger.h"
-#include "Util.h"
-
-#include <dwmapi.h>
-
-extern AppSettings g_settings;
-extern TrayIcon*   g_tray;
 
 ScreenshotSession::ScreenshotSession() {}
 ScreenshotSession::~ScreenshotSession() { closeAll(); }
@@ -89,28 +80,14 @@ void ScreenshotSession::onAction(ScreenshotAction action)
 {
     if (!overlay_) { closeAll(); return; }
 
-    if (toolbar_) toolbar_->hide();
-    overlay_->hide();
-
-    DwmFlush();
-    Sleep(20);
-    DwmFlush();
-
     NormRect sel = tracker_.rect();
-    int x = (int)std::floor(sel.x);
-    int y = (int)std::floor(sel.y);
-    int w = (int)std::ceil(sel.x + sel.w) - x;
-    int h = (int)std::ceil(sel.y + sel.h) - y;
-    if (w < 1) w = 1;
-    if (h < 1) h = 1;
-
-    HBITMAP bmp = gdiutil::CaptureScreenRect(x, y, w, h);
+    HBITMAP bmp = overlay_->captureRect(sel);
 
     closeAll();
 
     if (!bmp)
     {
-        logger::error("CaptureScreenRect returned null");
+        logger::error("captureRect returned null");
         return;
     }
 

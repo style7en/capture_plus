@@ -2,6 +2,7 @@
 #include "Logger.h"
 
 static const wchar_t* KC_TOOLBAR = L"CapturePlus_ToolbarWnd";
+static bool s_classOk = false;
 
 enum { IDC_COPY, IDC_SAVE, IDC_OCR, IDC_AI, IDC_TRANSLATE, IDC_CANCEL };
 
@@ -25,12 +26,15 @@ static int getDpiScale()
 
 ToolbarWindow::ToolbarWindow()
 {
-    WNDCLASSW wc = {};
-    wc.lpfnWndProc   = &ToolbarWindow::WndProc;
-    wc.hInstance     = GetModuleHandleW(nullptr);
-    wc.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
-    wc.lpszClassName = KC_TOOLBAR;
-    RegisterClassW(&wc);
+    if (!s_classOk)
+    {
+        WNDCLASSW wc = {};
+        wc.lpfnWndProc   = &ToolbarWindow::WndProc;
+        wc.hInstance     = GetModuleHandleW(nullptr);
+        wc.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+        wc.lpszClassName = KC_TOOLBAR;
+        s_classOk = RegisterClassW(&wc) != 0;
+    }
 
     scale_ = getDpiScale();
     int btnW = 58 * scale_ / 100;
@@ -104,11 +108,6 @@ void ToolbarWindow::show()
                  SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
     ShowWindow(hwnd_, SW_SHOWNOACTIVATE);
     SetForegroundWindow(hwnd_);
-}
-
-void ToolbarWindow::hide()
-{
-    if (hwnd_) ShowWindow(hwnd_, SW_HIDE);
 }
 
 void ToolbarWindow::close()

@@ -5,12 +5,23 @@
 
 namespace saveimage {
 
+static std::wstring getKnownFolder(REFKNOWNFOLDERID rfid)
+{
+    PWSTR path = nullptr;
+    std::wstring result;
+    if (SUCCEEDED(SHGetKnownFolderPath(rfid, 0, nullptr, &path)) && path)
+    {
+        result = path;
+        CoTaskMemFree(path);
+    }
+    return result;
+}
+
 static std::wstring resolveDir()
 {
-    wchar_t buf[MAX_PATH];
-    if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_MYPICTURES, nullptr, 0, buf)))
+    std::wstring pics = getKnownFolder(FOLDERID_Pictures);
+    if (!pics.empty())
     {
-        std::wstring pics = buf;
         pics += L"\\Screenshots";
         if (!PathFileExistsW(pics.c_str()))
         {
@@ -19,8 +30,8 @@ static std::wstring resolveDir()
         }
         else return pics;
     }
-    if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_DESKTOP, nullptr, 0, buf)))
-        return buf;
+    std::wstring desktop = getKnownFolder(FOLDERID_Desktop);
+    if (!desktop.empty()) return desktop;
     return L".";
 }
 

@@ -7,7 +7,7 @@
 #define IDC_VISIONMODEL_EDIT            1005
 #define IDC_TEXTMODEL_EDIT              1006
 #define IDC_TRANSLATE_COMBO             1007
-#define IDC_TEST_BTN                    1010
+#define IDC_TOGGLE_APIKEY_BTN         1010
 #define IDC_SETTINGS_OK                 1011
 #define IDC_SETTINGS_CANCEL             1012
 

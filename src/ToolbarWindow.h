@@ -15,7 +15,6 @@ public:
 
     bool create(int x, int y);
     void show();
-    void hide();
     void close();
 
     HWND hwnd() const { return hwnd_; }

@@ -3,8 +3,8 @@ build/
 *.o
 *.obj
 
-# Compiled binary
-capture-plus.exe
+# Compiled binaries
+*.exe
 res.o
 
 # IDE / editor

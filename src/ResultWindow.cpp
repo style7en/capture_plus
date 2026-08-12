@@ -6,17 +6,21 @@
 #include "resource.h"
 
 static const wchar_t* KC_RESULT = L"CapturePlus_ResultWnd";
+static bool s_classOk = false;
 
 extern AppSettings g_settings;
 
 ResultWindow::ResultWindow(Mode mode, HBITMAP bmp) : mode_(mode)
 {
-    WNDCLASSW wc = {};
-    wc.lpfnWndProc   = &ResultWindow::WndProc;
-    wc.hInstance     = GetModuleHandleW(nullptr);
-    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-    wc.lpszClassName = KC_RESULT;
-    RegisterClassW(&wc);
+    if (!s_classOk)
+    {
+        WNDCLASSW wc = {};
+        wc.lpfnWndProc   = &ResultWindow::WndProc;
+        wc.hInstance     = GetModuleHandleW(nullptr);
+        wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+        wc.lpszClassName = KC_RESULT;
+        s_classOk = RegisterClassW(&wc) != 0;
+    }
 
     HDC dc = GetDC(nullptr);
     int dpi = GetDeviceCaps(dc, LOGPIXELSY);

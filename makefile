@@ -31,5 +31,15 @@ $(BUILDDIR):
 clean:
 	rm -f $(TARGET)
 	rm -rf $(BUILDDIR)
+	rm -f tests.exe
 
-.PHONY: all clean
+TEST_SRCS = tests/main.cpp src/Json.cpp src/Util.cpp src/Logger.cpp src/SelectionTracker.cpp src/HotkeyManager.cpp
+TEST_LIBS = -luser32 -lshell32 -lole32 -luuid -lshlwapi
+
+tests.exe: $(TEST_SRCS) src/Pch.h
+	$(CXX) -std=c++17 -O2 -Wall -I. -Isrc $(TEST_SRCS) -o tests.exe $(TEST_LIBS)
+
+test: tests.exe
+	./tests.exe
+
+.PHONY: all clean test

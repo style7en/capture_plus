@@ -132,10 +132,22 @@ bool HotkeyManager::reRegister(const std::string& hotkey)
 {
     UINT mods, vk;
     if (!HotkeyParse(hotkey, mods, vk)) return false;
+
+    UINT oldMods = mods_;
+    UINT oldVk   = vk_;
     if (registered_) UnregisterHotKey(hwnd_, HOTKEY_ID);
-    registered_ = RegisterHotKey(hwnd_, HOTKEY_ID, mods, vk);
-    if (registered_) { mods_ = mods; vk_ = vk; return true; }
-    registered_ = (mods_ || vk_) && RegisterHotKey(hwnd_, HOTKEY_ID, mods_, vk_);
+    registered_ = false;
+
+    if (RegisterHotKey(hwnd_, HOTKEY_ID, mods, vk))
+    {
+        mods_ = mods;
+        vk_   = vk;
+        registered_ = true;
+        return true;
+    }
+
+    if ((oldMods || oldVk) && RegisterHotKey(hwnd_, HOTKEY_ID, oldMods, oldVk))
+        registered_ = true;
     return false;
 }
 

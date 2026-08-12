@@ -30,9 +30,14 @@ std::string Trim(const std::string& s)
 
 std::wstring GetAppDataDir()
 {
-    wchar_t buf[MAX_PATH];
-    if (SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, 0, buf)))
-        return std::wstring(buf) + L"\\CapturePlus";
+    PWSTR path = nullptr;
+    if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &path)) && path)
+    {
+        std::wstring result(path);
+        CoTaskMemFree(path);
+        return result + L"\\CapturePlus";
+    }
+    if (path) CoTaskMemFree(path);
     return L".";
 }
 
