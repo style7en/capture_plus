@@ -1,5 +1,5 @@
 CXX      = g++
-CXXFLAGS = -std=c++17 -O2 -municode -mwindows -Wall -I. -Isrc
+CXXFLAGS = -std=c++17 -O2 -municode -mwindows -Wall -I. -Isrc -Ires
 LDFLAGS  = -municode -mwindows -lgdi32 -luser32 -lshell32 -lgdiplus -lwinhttp \
            -lcomctl32 -lcomdlg32 -lole32 -loleaut32 -luuid -lshlwapi -ldwmapi
 
@@ -22,8 +22,8 @@ $(TARGET): $(OBJS) $(BUILDDIR)/res.o
 $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp $(SRCDIR)/Pch.h | $(BUILDDIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(BUILDDIR)/res.o: app.rc resource.h | $(BUILDDIR)
-	windres app.rc -O coff $@
+$(BUILDDIR)/res.o: res/app.rc res/resource.h | $(BUILDDIR)
+	windres res/app.rc -O coff $@
 
 $(BUILDDIR):
 	mkdir -p $(BUILDDIR)
@@ -37,7 +37,7 @@ TEST_SRCS = tests/main.cpp src/Json.cpp src/Util.cpp src/Logger.cpp src/Selectio
 TEST_LIBS = -luser32 -lshell32 -lole32 -luuid -lshlwapi
 
 tests.exe: $(TEST_SRCS) src/Pch.h
-	$(CXX) -std=c++17 -O2 -Wall -I. -Isrc $(TEST_SRCS) -o tests.exe $(TEST_LIBS)
+	$(CXX) -std=c++17 -O2 -Wall -I. -Isrc -Ires $(TEST_SRCS) -o tests.exe $(TEST_LIBS)
 
 test: tests.exe
 	./tests.exe

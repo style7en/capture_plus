@@ -54,9 +54,10 @@ make test       # 编译并运行单元测试
 
 ```
 capture-plus-win32/
-├── app.ico              应用图标
-├── app.rc               资源文件（设置对话框模板 + 图标）
-├── resource.h           资源 ID 定义
+├── res/                 资源文件（图标、对话框模板、资源 ID）
+│   ├── app.ico
+│   ├── app.rc
+│   └── resource.h
 ├── makefile             构建脚本
 ├── src/                 源码（18 个模块）
 └── tests/               单元测试（纯逻辑模块）

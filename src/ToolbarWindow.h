@@ -31,13 +31,17 @@ public:
 
 private:
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-    void layoutButtons();
+    RECT buttonRect(int i) const;
+    int  hitTest(int x, int y) const;
+    void drawButton(HDC dc, int i, bool hover, bool pressed);
 
     HWND hwnd_ = nullptr;
-    HWND buttons_[6] = {};
     HFONT font_ = nullptr;
     int   width_ = 0, height_ = 0;
     int   scale_ = 100;
+    int   hoverIdx_ = -1;
+    int   pressedIdx_ = -1;
+    bool  trackingMouse_ = false;
 
     ActionCb actionCb_;
     CancelCb cancelCb_;
