@@ -1,0 +1,33 @@
+#include <windows.h>
+#include "resource.h"
+
+#pragma code_page(65001)
+
+IDI_APP                  ICON                   "app.ico"
+
+IDR_SETTINGS_DIALOG DIALOGEX 0, 0, 300, 178
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "设置"
+FONT 9, "Microsoft YaHei"
+BEGIN
+    GROUPBOX        "AI 服务 (OpenAI 兼容)",  -1,                   10, 8,   280, 88
+    LTEXT           "BaseUrl:",                -1,                   20, 22,  55,  8
+    EDITTEXT                                    IDC_BASEURL_EDIT,    80, 20,  200, 11, ES_AUTOHSCROLL
+    LTEXT           "ApiKey:",                 -1,                   20, 40,  55,  8
+    EDITTEXT                                    IDC_APIKEY_EDIT,     80, 38,  150, 11, ES_AUTOHSCROLL | ES_PASSWORD
+    PUSHBUTTON      "显示/隐藏",               IDC_TEST_BTN,         235, 37,  45,  13
+    LTEXT           "视觉模型:",               -1,                   20, 58,  55,  8
+    EDITTEXT                                    IDC_VISIONMODEL_EDIT, 80, 56,  200, 11, ES_AUTOHSCROLL
+    LTEXT           "文本模型:",               -1,                   20, 76,  55,  8
+    EDITTEXT                                    IDC_TEXTMODEL_EDIT,   80, 74,  200, 11, ES_AUTOHSCROLL
+
+    LTEXT           "翻译目标语言:",            -1,                   10, 104, 70,  8
+    COMBOBOX                                    IDC_TRANSLATE_COMBO,  80, 102, 200, 120, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+
+    LTEXT           "截图快捷键:",              -1,                   10, 124, 70,  8
+    EDITTEXT                                    IDC_HOTKEY_EDIT,      80, 122, 130, 11, ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "(点击后按下新组合键)",      -1,                   215, 124, 75, 8
+
+    DEFPUSHBUTTON   "确定",                    IDC_SETTINGS_OK,      135, 148, 65,  16
+    PUSHBUTTON      "取消",                    IDC_SETTINGS_CANCEL,  205, 148, 65,  16
+END
