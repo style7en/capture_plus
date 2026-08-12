@@ -25,16 +25,25 @@ static const COLORREF CLR_CANCEL_D    = RGB(150, 52, 52);
 static const COLORREF CLR_TEXT        = RGB(235, 235, 235);
 static const COLORREF CLR_EDGE        = RGB(72, 72, 78);
 
-static int getDpiScale()
+static int getDpiForPoint(int px, int py)
 {
-    HDC dc = GetDC(nullptr);
-    int dpi = GetDeviceCaps(dc, LOGPIXELSX);
-    ReleaseDC(nullptr, dc);
-    if (dpi <= 0) dpi = 96;
-    return (int)(dpi * 100 / 96);
+    HMONITOR hmon = MonitorFromPoint({ px, py }, MONITOR_DEFAULTTONEAREST);
+    MONITORINFOEXW mi = {};
+    mi.cbSize = sizeof(MONITORINFOEXW);
+    if (hmon && GetMonitorInfoW(hmon, &mi))
+    {
+        HDC mdc = CreateDCW(L"DISPLAY", mi.szDevice, nullptr, nullptr);
+        if (mdc)
+        {
+            int dpi = GetDeviceCaps(mdc, LOGPIXELSX);
+            DeleteDC(mdc);
+            if (dpi > 0) return dpi;
+        }
+    }
+    return 96;
 }
 
-ToolbarWindow::ToolbarWindow()
+ToolbarWindow::ToolbarWindow(int px, int py)
 {
     if (!s_classOk)
     {
@@ -46,7 +55,8 @@ ToolbarWindow::ToolbarWindow()
         s_classOk = RegisterClassW(&wc) != 0;
     }
 
-    scale_ = getDpiScale();
+    int dpi = getDpiForPoint(px, py);
+    scale_ = dpi * 100 / 96;
     int btnW = 58 * scale_ / 100;
     int btnH = 26 * scale_ / 100;
     int cancelW = 28 * scale_ / 100;
@@ -54,10 +64,6 @@ ToolbarWindow::ToolbarWindow()
     width_  = 5 * btnW + cancelW + pad * 7;
     height_ = btnH + pad * 2;
 
-    HDC dc = GetDC(nullptr);
-    int dpi = GetDeviceCaps(dc, LOGPIXELSY);
-    ReleaseDC(nullptr, dc);
-    if (dpi <= 0) dpi = 96;
     int fontH = -MulDiv(9, dpi, 72);
     font_ = CreateFontW(fontH, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,

@@ -10,7 +10,7 @@ public:
     using ActionCb = std::function<void(ScreenshotAction)>;
     using CancelCb = std::function<void()>;
 
-    ToolbarWindow();
+    ToolbarWindow(int px, int py);
     ~ToolbarWindow();
 
     bool create(int x, int y);

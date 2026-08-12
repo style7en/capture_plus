@@ -10,6 +10,19 @@ static bool s_classOk = false;
 
 extern AppSettings g_settings;
 
+static std::atomic<int> g_inFlightAi{ 0 };
+
+void ResultWindow::WaitForAiTasks(int timeoutMs)
+{
+    int waited = 0;
+    while (waited < timeoutMs)
+    {
+        if (g_inFlightAi.load() <= 0) return;
+        Sleep(20);
+        waited += 20;
+    }
+}
+
 ResultWindow::ResultWindow(Mode mode, HBITMAP bmp) : mode_(mode)
 {
     if (!s_classOk)
@@ -177,7 +190,9 @@ LRESULT CALLBACK ResultWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
                 self->state_->hwnd = nullptr;
                 self->hwnd_ = nullptr;
                 SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+                CloseCb cb = std::move(self->closeCb_);
                 delete self;
+                if (cb) cb();
             }
             return 0;
     }
@@ -249,20 +264,23 @@ void ResultWindow::runAi()
     state_->closed = false;
     setLoading(L"正在处理…");
 
+    AppSettings settings = g_settings;
     auto state = state_;
     Mode mode = mode_;
     HWND target = hwnd_;
+    g_inFlightAi.fetch_add(1);
 
-    std::thread([state, mode, target]() {
+    std::thread([state, mode, target, settings]() {
+        struct Guard { ~Guard() { g_inFlightAi.fetch_sub(1); } } guard;
         std::wstring result;
         int kind = 0;
         try
         {
             AiService ai;
             std::string r;
-            if (mode == Mode::Ocr)        r = ai.ocr(state->bmp, g_settings);
-            else if (mode == Mode::Ai)    r = ai.analyze(state->bmp, g_settings);
-            else                          r = ai.translate(ai.ocr(state->bmp, g_settings), g_settings);
+            if (mode == Mode::Ocr)        r = ai.ocr(state->bmp, settings);
+            else if (mode == Mode::Ai)    r = ai.analyze(state->bmp, settings);
+            else                          r = ai.translate(ai.ocr(state->bmp, settings), settings);
             if (r.empty()) r = "（未返回内容）";
             result = util::ToWide(r);
         }

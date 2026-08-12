@@ -10,6 +10,11 @@ public:
     ResultWindow(Mode mode, HBITMAP bmp);
     ~ResultWindow();
 
+    using CloseCb = std::function<void()>;
+    void setCloseCb(CloseCb cb) { closeCb_ = std::move(cb); }
+
+    static void WaitForAiTasks(int timeoutMs);
+
     bool create();
     void show();
 
@@ -38,4 +43,5 @@ private:
     Mode   mode_;
 
     std::shared_ptr<Shared> state_;
+    CloseCb closeCb_;
 };

@@ -127,9 +127,28 @@ struct Parser
     bool parseNumber(Value& out)
     {
         const char* start = p;
-        if (p < end && (*p == '-' || *p == '+')) ++p;
-        while (p < end && ((*p >= '0' && *p <= '9') || *p == '.' || *p == 'e' || *p == 'E' || *p == '+' || *p == '-'))
+        if (p < end && *p == '-') ++p;
+        if (p >= end) return false;
+        if (*p == '0') ++p;
+        else if (*p >= '1' && *p <= '9')
+        {
+            while (p < end && *p >= '0' && *p <= '9') ++p;
+        }
+        else return false;
+
+        if (p < end && *p == '.')
+        {
             ++p;
+            if (p >= end || *p < '0' || *p > '9') return false;
+            while (p < end && *p >= '0' && *p <= '9') ++p;
+        }
+        if (p < end && (*p == 'e' || *p == 'E'))
+        {
+            ++p;
+            if (p < end && (*p == '+' || *p == '-')) ++p;
+            if (p >= end || *p < '0' || *p > '9') return false;
+            while (p < end && *p >= '0' && *p <= '9') ++p;
+        }
         if (p == start) return false;
         out = Value(std::strtod(std::string(start, p - start).c_str(), nullptr));
         return true;

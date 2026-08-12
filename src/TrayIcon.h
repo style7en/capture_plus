@@ -17,6 +17,8 @@ public:
     void updateMenuLabel(const std::wstring& screenshotLabel);
     void handleTrayMessage(WPARAM wp, LPARAM lp);
 
+    HWND hwnd() const { return hwnd_; }
+
 private:
     void showMenu();
 

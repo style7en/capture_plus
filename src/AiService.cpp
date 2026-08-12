@@ -211,7 +211,9 @@ std::string AiService::httpPost(const std::string& host, int port,
     {
         std::string snippet = resp.size() > 300 ? resp.substr(0, 300) : resp;
         logger::warn("AI HTTP " + std::to_string(statusCode) + ": " + snippet);
-        throw std::runtime_error("AI 服务返回 " + std::to_string(statusCode));
+        std::string brief = resp.size() > 200 ? resp.substr(0, 200) : resp;
+        throw std::runtime_error("AI 服务返回 " + std::to_string(statusCode) +
+                                 (brief.empty() ? std::string() : (": " + brief)));
     }
     return resp;
 }

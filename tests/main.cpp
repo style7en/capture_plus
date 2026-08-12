@@ -47,6 +47,17 @@ static void testJson()
     json::Value bad;
     CHECK(!json::parse(std::string("{bad}"), bad));
     CHECK(!json::parse(std::string(""), bad));
+    CHECK(!json::parse(std::string("+1"), bad));
+    CHECK(!json::parse(std::string("1e"), bad));
+    CHECK(!json::parse(std::string("01"), bad));
+    CHECK(!json::parse(std::string("1.2.3"), bad));
+    CHECK(!json::parse(std::string("-"), bad));
+
+    json::Value num;
+    CHECK(json::parse(std::string("-1.5e2"), num));
+    CHECK(num.asNumber() == -150.0);
+    CHECK(json::parse(std::string("0.25"), num));
+    CHECK(num.asNumber() == 0.25);
 }
 
 static void testUtil()

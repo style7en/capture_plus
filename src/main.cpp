@@ -5,6 +5,7 @@
 #include "HotkeyManager.h"
 #include "ScreenshotSession.h"
 #include "SettingsWindow.h"
+#include "ResultWindow.h"
 #include "OverlayWindow.h"
 #include "GdiUtil.h"
 #include "Util.h"
@@ -59,7 +60,7 @@ int APIENTRY wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
     setDpiAware();
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
-    HANDLE mutex = CreateMutexW(nullptr, TRUE, L"Global\\CapturePlus_SingleInstance");
+    HANDLE mutex = CreateMutexW(nullptr, TRUE, L"Local\\CapturePlus_SingleInstance");
     if (GetLastError() == ERROR_ALREADY_EXISTS)
     {
         MessageBoxW(nullptr, L"CapturePlus 已在后台运行。", L"CapturePlus",
@@ -74,6 +75,7 @@ int APIENTRY wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
     g_settings = LoadSettings();
 
     g_tray = new TrayIcon();
+    g_mainHwnd = g_tray->hwnd();
     g_tray->setOnScreenshot(startScreenshot);
     g_tray->setOnSettings(openSettings);
     g_tray->setOnExit(quitApp);
@@ -95,6 +97,7 @@ int APIENTRY wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
         DispatchMessageW(&msg);
     }
 
+    ResultWindow::WaitForAiTasks(5000);
     delete g_session;
     delete g_hotkey;
     delete g_tray;

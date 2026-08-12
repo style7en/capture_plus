@@ -49,7 +49,7 @@ TrayIcon::~TrayIcon()
 
 void TrayIcon::showBalloon(const std::wstring& msg, int ms)
 {
-    nid_.uFlags = NIF_INFO;
+    nid_.uFlags |= NIF_INFO;
     nid_.dwInfoFlags = NIIF_NONE;
     nid_.uTimeout = (UINT)ms;
     wcsncpy(nid_.szInfoTitle, L"CapturePlus", 63);
@@ -86,12 +86,13 @@ void TrayIcon::showMenu()
     SetForegroundWindow(hwnd_);
     int cmd = TrackPopupMenu(menu_, TPM_NONOTIFY | TPM_RETURNCMD | TPM_LEFTALIGN,
                              pt.x, pt.y, 0, hwnd_, nullptr);
+    PostMessageW(hwnd_, WM_NULL, 0, 0);
     switch (cmd)
     {
         case 1: if (onScreenshot_) onScreenshot_(); break;
         case 2: if (onSettings_)   onSettings_();   break;
         case 3: MessageBoxW(nullptr,
-            L"CapturePlus v1.01\n\n"
+            L"CapturePlus v1.02\n\n"
             L"Windows 截图增强工具。常驻通知栏，按快捷键呼出截图，框选后提供五项操作：\n\n"
             L"  · 复制图片 — 选区位图复制到剪贴板\n"
             L"  · 保存图片 — 保存为 PNG / JPEG / BMP\n"

@@ -59,7 +59,7 @@ void ScreenshotSession::showToolbar(double x, double y)
     GetMonitorInfoW(hmon, &mi);
     RECT& m = mi.rcMonitor;
 
-    toolbar_ = new ToolbarWindow();
+    toolbar_ = new ToolbarWindow((int)x, (int)y);
     NormRect sel = tracker_.rect();
     int tx, ty;
     ToolbarWindow::computePosition(sel, m.left, m.top,
@@ -83,11 +83,12 @@ void ScreenshotSession::onAction(ScreenshotAction action)
     NormRect sel = tracker_.rect();
     HBITMAP bmp = overlay_->captureRect(sel);
 
-    closeAll();
+    closeWindows();
 
     if (!bmp)
     {
         logger::error("captureRect returned null");
+        busy_ = false;
         return;
     }
 
@@ -96,10 +97,12 @@ void ScreenshotSession::onAction(ScreenshotAction action)
         case ScreenshotAction::Copy:
             copyimage::Copy(bmp);
             DeleteObject((HGDIOBJ)bmp);
+            busy_ = false;
             break;
         case ScreenshotAction::Save:
             saveimage::Save(bmp);
             DeleteObject((HGDIOBJ)bmp);
+            busy_ = false;
             break;
         case ScreenshotAction::Ocr:
         case ScreenshotAction::Ai:
@@ -110,17 +113,23 @@ void ScreenshotSession::onAction(ScreenshotAction action)
               : (action == ScreenshotAction::Ai)        ? ResultWindow::Mode::Ai
               :                                         ResultWindow::Mode::Translate;
             auto* rw = new ResultWindow(mode, bmp);
-            if (!rw->create()) { delete rw; break; }
+            rw->setCloseCb([this]() { busy_ = false; });
+            if (!rw->create()) { delete rw; busy_ = false; break; }
             rw->show();
             break;
         }
     }
 }
 
-void ScreenshotSession::closeAll()
+void ScreenshotSession::closeWindows()
 {
     if (toolbar_) { delete toolbar_; toolbar_ = nullptr; }
     if (overlay_) { delete overlay_; overlay_ = nullptr; }
     tracker_.reset();
+}
+
+void ScreenshotSession::closeAll()
+{
+    closeWindows();
     busy_ = false;
 }

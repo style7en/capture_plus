@@ -23,12 +23,9 @@ static std::wstring resolveDir()
     if (!pics.empty())
     {
         pics += L"\\Screenshots";
-        if (!PathFileExistsW(pics.c_str()))
-        {
-            if (CreateDirectoryW(pics.c_str(), nullptr))
-                return pics;
-        }
-        else return pics;
+        int r = SHCreateDirectoryExW(nullptr, pics.c_str(), nullptr);
+        if (r == ERROR_SUCCESS || r == ERROR_ALREADY_EXISTS)
+            return pics;
     }
     std::wstring desktop = getKnownFolder(FOLDERID_Desktop);
     if (!desktop.empty()) return desktop;

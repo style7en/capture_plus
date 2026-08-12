@@ -17,6 +17,7 @@ private:
     void renderOverlay();
     void showToolbar(double x, double y);
     void onAction(ScreenshotAction action);
+    void closeWindows();
     void closeAll();
 
     OverlayWindow*    overlay_  = nullptr;
