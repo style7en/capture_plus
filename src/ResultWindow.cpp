@@ -144,9 +144,17 @@ LRESULT CALLBACK ResultWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
             int kind = p->first;
             std::wstring text = std::move(p->second);
             delete p;
-            if (kind == 0) self->setResult(text);
-            else           self->setError(text);
-            EnableWindow(self->retryBtn_, FALSE);
+            if (kind == 0)
+            {
+                if (self->state_->bmp) { DeleteObject((HGDIOBJ)self->state_->bmp); self->state_->bmp = nullptr; }
+                self->setResult(text);
+                EnableWindow(self->retryBtn_, FALSE);
+            }
+            else
+            {
+                self->setError(text);
+                EnableWindow(self->retryBtn_, TRUE);
+            }
             return 0;
         }
         case WM_CLOSE:
@@ -264,7 +272,6 @@ void ResultWindow::runAi()
             result = util::ToWide(std::string("失败：") + e.what());
             logger::error("AI run failed: " + std::string(e.what()));
         }
-        if (state->bmp) { DeleteObject((HGDIOBJ)state->bmp); state->bmp = nullptr; }
         if (!state->closed.load() && IsWindow(target))
         {
             auto* p = new std::pair<int, std::wstring>(kind, std::move(result));
