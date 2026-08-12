@@ -14,8 +14,8 @@ BEGIN
     LTEXT           "BaseUrl:",                -1,                   20, 22,  55,  8
     EDITTEXT                                    IDC_BASEURL_EDIT,    80, 20,  200, 11, ES_AUTOHSCROLL
     LTEXT           "ApiKey:",                 -1,                   20, 40,  55,  8
-    EDITTEXT                                    IDC_APIKEY_EDIT,     80, 38,  150, 11, ES_AUTOHSCROLL | ES_PASSWORD
-    PUSHBUTTON      "显示/隐藏密钥",         IDC_TOGGLE_APIKEY_BTN, 235, 37,  45,  13
+    EDITTEXT                                    IDC_APIKEY_EDIT,     80, 38,  130, 11, ES_AUTOHSCROLL | ES_PASSWORD
+    PUSHBUTTON      "显示/隐藏密钥",         IDC_TOGGLE_APIKEY_BTN, 215, 37,  65,  13
     LTEXT           "视觉模型:",               -1,                   20, 58,  55,  8
     EDITTEXT                                    IDC_VISIONMODEL_EDIT, 80, 56,  200, 11, ES_AUTOHSCROLL
     LTEXT           "文本模型:",               -1,                   20, 76,  55,  8
@@ -28,6 +28,6 @@ BEGIN
     EDITTEXT                                    IDC_HOTKEY_EDIT,      80, 122, 130, 11, ES_AUTOHSCROLL | ES_READONLY
     LTEXT           "(点击后按下新组合键)",      -1,                   215, 124, 75, 8
 
-    DEFPUSHBUTTON   "确定",                    IDC_SETTINGS_OK,      135, 148, 65,  16
-    PUSHBUTTON      "取消",                    IDC_SETTINGS_CANCEL,  205, 148, 65,  16
+    DEFPUSHBUTTON   "确定",                    IDC_SETTINGS_OK,      145, 152,  50,  14
+    PUSHBUTTON      "取消",                    IDC_SETTINGS_CANCEL,  205, 152,  50,  14
 END

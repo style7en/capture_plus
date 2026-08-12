@@ -97,6 +97,10 @@ std::string AiService::sendTextImpl(const json::Value& req, const AppSettings& s
         throw std::runtime_error("AI 返回无 content");
 
     std::string out = content->asString();
+    size_t start = 0;
+    while (start < out.size() && (out[start] == '\n' || out[start] == '\r' || out[start] == ' '))
+        start++;
+    out.erase(0, start);
     while (!out.empty() && (out.back() == '\n' || out.back() == '\r' || out.back() == ' '))
         out.pop_back();
     return out;
