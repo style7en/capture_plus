@@ -1,6 +1,6 @@
 CXX      = g++
 CXXFLAGS = -std=c++17 -O2 -municode -mwindows -Wall -I. -Isrc -Ires
-LDFLAGS  = -municode -mwindows -lgdi32 -luser32 -lshell32 -lgdiplus -lwinhttp \
+LDFLAGS  = -s -municode -mwindows -lgdi32 -luser32 -lshell32 -lgdiplus -lwinhttp \
            -lcomctl32 -lcomdlg32 -lole32 -loleaut32 -luuid -lshlwapi -ldwmapi
 
 SRCDIR   = src
