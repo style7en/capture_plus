@@ -21,6 +21,13 @@ std::string AiService::translate(const std::string& text, const AppSettings& s)
     return sendText(prompts::translate(s.translateTargetLanguage, text), s.api.textModel, s);
 }
 
+std::string AiService::translateDirect(HBITMAP bmp, const AppSettings& s)
+{
+    std::string prompt = "请将这张图片中的文字翻译为" + s.translateTargetLanguage
+        + "，只输出译文，不要添加解释。如果图片中没有文字，请说明。";
+    return sendVision(bmp, prompt, s.api.visionModel, s);
+}
+
 std::string AiService::sendVision(HBITMAP bmp, const std::string& prompt,
                                   const std::string& model, const AppSettings& s)
 {
@@ -28,10 +35,10 @@ std::string AiService::sendVision(HBITMAP bmp, const std::string& prompt,
 
     json::Value content = json::Value::makeArray();
     json::Value textPart = json::Value::makeObject();
-    textPart.set("type", json::Value(std::string("text")));
+    textPart.set("type", json::Value("text"));
     textPart.set("text", json::Value(prompt));
     json::Value imgPart = json::Value::makeObject();
-    imgPart.set("type", json::Value(std::string("image_url")));
+    imgPart.set("type", json::Value("image_url"));
     json::Value imgUrl = json::Value::makeObject();
     imgUrl.set("url", json::Value("data:image/png;base64," + b64));
     imgPart.set("image_url", std::move(imgUrl));
@@ -39,7 +46,7 @@ std::string AiService::sendVision(HBITMAP bmp, const std::string& prompt,
     content.push(std::move(imgPart));
 
     json::Value msg = json::Value::makeObject();
-    msg.set("role", json::Value(std::string("user")));
+    msg.set("role", json::Value("user"));
     msg.set("content", std::move(content));
 
     json::Value req = json::Value::makeObject();
@@ -55,7 +62,7 @@ std::string AiService::sendText(const std::string& prompt, const std::string& mo
                                 const AppSettings& s)
 {
     json::Value msg = json::Value::makeObject();
-    msg.set("role", json::Value(std::string("user")));
+    msg.set("role", json::Value("user"));
     msg.set("content", json::Value(prompt));
 
     json::Value req = json::Value::makeObject();
@@ -97,13 +104,7 @@ std::string AiService::sendTextImpl(const json::Value& req, const AppSettings& s
         throw std::runtime_error("AI 返回无 content");
 
     std::string out = content->asString();
-    size_t start = 0;
-    while (start < out.size() && (out[start] == '\n' || out[start] == '\r' || out[start] == ' '))
-        start++;
-    out.erase(0, start);
-    while (!out.empty() && (out.back() == '\n' || out.back() == '\r' || out.back() == ' '))
-        out.pop_back();
-    return out;
+    return util::Trim(out);
 }
 
 std::string AiService::bitmapToBase64Png(HBITMAP bmp)
@@ -167,7 +168,7 @@ std::string AiService::httpPost(const std::string& host, int port,
         WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!hSession) throw std::runtime_error("WinHttpOpen failed");
 
-    WinHttpSetTimeouts(hSession, 30000, 30000, 30000, 60000);
+    WinHttpSetTimeouts(hSession, 10000, 10000, 10000, 30000);
 
     hConnect = WinHttpConnect(hSession, whost.c_str(),
         (port ? port : (https ? INTERNET_DEFAULT_HTTPS_PORT : INTERNET_DEFAULT_HTTP_PORT)), 0);

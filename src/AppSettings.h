@@ -18,3 +18,5 @@ struct AppSettings
 
 AppSettings LoadSettings();
 void        SaveSettings(const AppSettings& s);
+
+const std::vector<std::wstring>& TranslateLanguageList();

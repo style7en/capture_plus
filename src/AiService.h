@@ -9,6 +9,7 @@ public:
     std::string analyze(HBITMAP bmp, const AppSettings& s);
     std::string ocr(HBITMAP bmp, const AppSettings& s);
     std::string translate(const std::string& text, const AppSettings& s);
+    std::string translateDirect(HBITMAP bmp, const AppSettings& s);
 
 private:
     std::string sendVision(HBITMAP bmp, const std::string& prompt,

@@ -15,12 +15,12 @@ public:
 
     void showBalloon(const std::wstring& msg, int ms = 1500);
     void updateMenuLabel(const std::wstring& screenshotLabel);
-    void handleTrayMessage(WPARAM wp, LPARAM lp);
 
     HWND hwnd() const { return hwnd_; }
 
 private:
     void showMenu();
+    void handleTrayMessage(WPARAM wp, LPARAM lp);
 
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 

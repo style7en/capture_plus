@@ -7,7 +7,6 @@
 class ScreenshotSession
 {
 public:
-    ScreenshotSession();
     ~ScreenshotSession();
 
     void start();

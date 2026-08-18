@@ -4,7 +4,6 @@
 #include "ResultWindow.h"
 #include "Logger.h"
 
-ScreenshotSession::ScreenshotSession() {}
 ScreenshotSession::~ScreenshotSession() { closeAll(); }
 
 void ScreenshotSession::start()
@@ -92,33 +91,23 @@ void ScreenshotSession::onAction(ScreenshotAction action)
         return;
     }
 
-    switch (action)
+    if (action == ScreenshotAction::Copy || action == ScreenshotAction::Save)
     {
-        case ScreenshotAction::Copy:
-            copyimage::Copy(bmp);
-            DeleteObject((HGDIOBJ)bmp);
-            busy_ = false;
-            break;
-        case ScreenshotAction::Save:
-            saveimage::Save(bmp);
-            DeleteObject((HGDIOBJ)bmp);
-            busy_ = false;
-            break;
-        case ScreenshotAction::Ocr:
-        case ScreenshotAction::Ai:
-        case ScreenshotAction::Translate:
-        {
-            ResultWindow::Mode mode =
-                (action == ScreenshotAction::Ocr)       ? ResultWindow::Mode::Ocr
-              : (action == ScreenshotAction::Ai)        ? ResultWindow::Mode::Ai
-              :                                         ResultWindow::Mode::Translate;
-            auto* rw = new ResultWindow(mode, bmp);
-            rw->setCloseCb([this]() { busy_ = false; });
-            if (!rw->create()) { delete rw; busy_ = false; break; }
-            rw->show();
-            break;
-        }
+        if (action == ScreenshotAction::Copy) copyimage::Copy(bmp);
+        else                                  saveimage::Save(bmp);
+        DeleteObject((HGDIOBJ)bmp);
+        busy_ = false;
+        return;
     }
+
+    ResultWindow::Mode mode =
+        (action == ScreenshotAction::Ocr)       ? ResultWindow::Mode::Ocr
+      : (action == ScreenshotAction::Ai)        ? ResultWindow::Mode::Ai
+      :                                         ResultWindow::Mode::Translate;
+    auto* rw = new ResultWindow(mode, bmp);
+    if (!rw->create()) { delete rw; busy_ = false; return; }
+    rw->show();
+    busy_ = false;
 }
 
 void ScreenshotSession::closeWindows()

@@ -17,7 +17,6 @@ public:
     void show();
     void close();
 
-    HWND hwnd() const { return hwnd_; }
     int  width() const  { return width_; }
     int  height() const { return height_; }
 
@@ -39,6 +38,7 @@ private:
     HFONT font_ = nullptr;
     int   width_ = 0, height_ = 0;
     int   scale_ = 100;
+    int   btnW_ = 0, btnH_ = 0, cancelW_ = 0, pad_ = 0;
     int   hoverIdx_ = -1;
     int   pressedIdx_ = -1;
     bool  trackingMouse_ = false;

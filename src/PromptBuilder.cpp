@@ -16,7 +16,7 @@ std::string aiOcr()
 
 std::string translate(const std::string& targetLanguage, const std::string& text)
 {
-    return "将以下文本翻译为" + targetLanguage + "，只输出译文，保留原格式：\n\n" + text;
+    return "将以下文本翻译为" + targetLanguage + "，只输出译文，保留原格式。如果文本已经是" + targetLanguage + "，请直接原样输出，不要额外说明：\n\n" + text;
 }
 
 }

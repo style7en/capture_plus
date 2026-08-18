@@ -1,4 +1,5 @@
 #include "ToolbarWindow.h"
+#include "GdiUtil.h"
 #include "Logger.h"
 
 static const wchar_t* KC_TOOLBAR = L"CapturePlus_ToolbarWnd";
@@ -28,16 +29,23 @@ static const COLORREF CLR_EDGE        = RGB(72, 72, 78);
 static int getDpiForPoint(int px, int py)
 {
     HMONITOR hmon = MonitorFromPoint({ px, py }, MONITOR_DEFAULTTONEAREST);
-    MONITORINFOEXW mi = {};
-    mi.cbSize = sizeof(MONITORINFOEXW);
-    if (hmon && GetMonitorInfoW(hmon, &mi))
+    if (hmon)
     {
-        HDC mdc = CreateDCW(L"DISPLAY", mi.szDevice, nullptr, nullptr);
-        if (mdc)
+        HMODULE shcore = LoadLibraryW(L"shcore.dll");
+        if (shcore)
         {
-            int dpi = GetDeviceCaps(mdc, LOGPIXELSX);
-            DeleteDC(mdc);
-            if (dpi > 0) return dpi;
+            using GetDpiForMonitor_t = HRESULT(WINAPI*)(HMONITOR, int, UINT*, UINT*);
+            auto fn = (GetDpiForMonitor_t)GetProcAddress(shcore, "GetDpiForMonitor");
+            if (fn)
+            {
+                UINT x = 0, y = 0;
+                if (SUCCEEDED(fn(hmon, 0, &x, &y)) && x > 0)
+                {
+                    FreeLibrary(shcore);
+                    return (int)x;
+                }
+            }
+            FreeLibrary(shcore);
         }
     }
     return 96;
@@ -57,18 +65,14 @@ ToolbarWindow::ToolbarWindow(int px, int py)
 
     int dpi = getDpiForPoint(px, py);
     scale_ = dpi * 100 / 96;
-    int btnW = 58 * scale_ / 100;
-    int btnH = 26 * scale_ / 100;
-    int cancelW = 28 * scale_ / 100;
-    int pad = 4 * scale_ / 100;
-    width_  = 5 * btnW + cancelW + pad * 7;
-    height_ = btnH + pad * 2;
+    btnW_    = 58 * scale_ / 100;
+    btnH_    = 26 * scale_ / 100;
+    cancelW_ = 28 * scale_ / 100;
+    pad_     = 4 * scale_ / 100;
+    width_  = 5 * btnW_ + cancelW_ + pad_ * 7;
+    height_ = btnH_ + pad_ * 2;
 
-    int fontH = -MulDiv(9, dpi, 72);
-    font_ = CreateFontW(fontH, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-                        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
-                        CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
-                        FF_DONTCARE, L"Microsoft YaHei");
+    font_ = gdiutil::CreateUiFont(dpi);
 }
 
 ToolbarWindow::~ToolbarWindow()
@@ -91,15 +95,11 @@ bool ToolbarWindow::create(int x, int y)
 
 RECT ToolbarWindow::buttonRect(int i) const
 {
-    int btnW = 58 * scale_ / 100;
-    int btnH = 26 * scale_ / 100;
-    int cancelW = 28 * scale_ / 100;
-    int pad = 4 * scale_ / 100;
-    int cx = pad;
+    int cx = pad_;
     for (int j = 0; j < i; j++)
-        cx += ((j == 5) ? cancelW : btnW) + pad;
-    int w = (i == 5) ? cancelW : btnW;
-    RECT r = { cx, pad, cx + w, pad + btnH };
+        cx += ((j == 5) ? cancelW_ : btnW_) + pad_;
+    int w = (i == 5) ? cancelW_ : btnW_;
+    RECT r = { cx, pad_, cx + w, pad_ + btnH_ };
     return r;
 }
 

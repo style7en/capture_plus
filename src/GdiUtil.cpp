@@ -1,5 +1,6 @@
 #include "GdiUtil.h"
 #include "Logger.h"
+#include "resource.h"
 
 namespace gdiutil {
 
@@ -14,6 +15,27 @@ void GdiStartup()
 void GdiShutdown()
 {
     if (g_gdiToken) { Gdiplus::GdiplusShutdown(g_gdiToken); g_gdiToken = 0; }
+}
+
+HFONT CreateUiFont(int dpi)
+{
+    int h = -MulDiv(9, dpi, 72);
+    return CreateFontW(h, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                       DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+                       CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+                       FF_DONTCARE, L"Microsoft YaHei");
+}
+
+void SetAppIcon(HWND hwnd)
+{
+    HICON hIcon = (HICON)LoadImageW(GetModuleHandleW(nullptr),
+        MAKEINTRESOURCEW(IDI_APP), IMAGE_ICON,
+        GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_SHARED);
+    if (hIcon)
+    {
+        SendMessageW(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        SendMessageW(hwnd, WM_SETICON, ICON_BIG,   (LPARAM)hIcon);
+    }
 }
 
 HBITMAP CaptureScreenRect(int x, int y, int w, int h)

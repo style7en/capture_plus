@@ -61,12 +61,11 @@ void Save(HBITMAP hbmp)
 
     if (!GetSaveFileNameW(&ofn)) return;
 
-    std::wstring ext = filePath;
-    size_t dot = ext.find_last_of(L'.');
+    const wchar_t* dot = wcsrchr(filePath, L'.');
     const wchar_t* mime = L"image/png";
-    if (dot != std::wstring::npos)
+    if (dot)
     {
-        std::wstring e = ext.substr(dot);
+        std::wstring e = dot;
         if (e == L".jpg" || e == L".jpeg") mime = L"image/jpeg";
         else if (e == L".bmp")             mime = L"image/bmp";
     }

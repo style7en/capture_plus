@@ -17,6 +17,9 @@ struct BitmapGuard
 void GdiStartup();
 void GdiShutdown();
 
+HFONT CreateUiFont(int dpi);
+void SetAppIcon(HWND hwnd);
+
 HBITMAP CaptureScreenRect(int x, int y, int w, int h);
 HBITMAP CropBitmap(HBITMAP src, int x, int y, int w, int h);
 HGLOBAL  HBitmapToDibGlobal(HBITMAP hbmp);

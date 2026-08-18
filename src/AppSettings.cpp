@@ -77,7 +77,6 @@ static AppSettings fromJson(const json::Value& v)
     if (s.hotkey.empty())                   s.hotkey = def.hotkey;
     if (s.api.baseUrl.empty())              s.api.baseUrl = def.api.baseUrl;
     if (s.api.visionModel.empty())          s.api.visionModel = def.api.visionModel;
-    if (s.api.textModel.empty())            s.api.textModel = def.api.textModel;
     if (s.translateTargetLanguage.empty())  s.translateTargetLanguage = def.translateTargetLanguage;
     return s;
 }
@@ -94,6 +93,17 @@ static json::Value toJson(const AppSettings& s)
     root.set("Api", std::move(api));
     root.set("TranslateTargetLanguage", s.translateTargetLanguage);
     return root;
+}
+
+static const std::vector<std::wstring> kTranslateLanguages = {
+    L"English", L"中文（简体）", L"中文（繁體）", L"日本語", L"한국어",
+    L"Français", L"Deutsch", L"Español", L"Italiano", L"Português",
+    L"Русский", L"العربية", L"ไทย", L"Tiếng Việt",
+};
+
+const std::vector<std::wstring>& TranslateLanguageList()
+{
+    return kTranslateLanguages;
 }
 
 AppSettings LoadSettings()

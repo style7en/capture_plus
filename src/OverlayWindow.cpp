@@ -52,23 +52,19 @@ bool OverlayWindow::create()
 
     if (snapshot_)
     {
-        HDC screen = GetDC(nullptr);
-        HDC mem = CreateCompatibleDC(screen);
-        dimmed_ = CreateCompatibleBitmap(screen, width_, height_);
-        HBITMAP old = (HBITMAP)SelectObject(mem, dimmed_);
-        HDC src = CreateCompatibleDC(screen);
-        HBITMAP oldSrc = (HBITMAP)SelectObject(src, snapshot_);
-        BitBlt(mem, 0, 0, width_, height_, src, 0, 0, SRCCOPY);
-        SelectObject(src, oldSrc);
-        DeleteDC(src);
+        dimmed_ = gdiutil::CropBitmap(snapshot_, 0, 0, width_, height_);
+        if (dimmed_)
         {
+            HDC screen = GetDC(nullptr);
+            HDC mem = CreateCompatibleDC(screen);
+            HBITMAP old = (HBITMAP)SelectObject(mem, dimmed_);
             Gdiplus::Graphics g(mem);
             Gdiplus::SolidBrush dim(Gdiplus::Color(140, 0, 0, 0));
             g.FillRectangle(&dim, 0, 0, width_, height_);
+            SelectObject(mem, old);
+            DeleteDC(mem);
+            ReleaseDC(nullptr, screen);
         }
-        SelectObject(mem, old);
-        DeleteDC(mem);
-        ReleaseDC(nullptr, screen);
     }
 
     hwnd_ = CreateWindowExW(

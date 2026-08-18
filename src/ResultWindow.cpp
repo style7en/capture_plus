@@ -1,6 +1,7 @@
 #include "ResultWindow.h"
 #include "AiService.h"
 #include "AppSettings.h"
+#include "GdiUtil.h"
 #include "Logger.h"
 #include "Util.h"
 #include "resource.h"
@@ -23,6 +24,11 @@ void ResultWindow::WaitForAiTasks(int timeoutMs)
     }
 }
 
+bool ResultWindow::HasInFlightAi()
+{
+    return g_inFlightAi.load() > 0;
+}
+
 ResultWindow::ResultWindow(Mode mode, HBITMAP bmp) : mode_(mode)
 {
     if (!s_classOk)
@@ -39,10 +45,7 @@ ResultWindow::ResultWindow(Mode mode, HBITMAP bmp) : mode_(mode)
     int dpi = GetDeviceCaps(dc, LOGPIXELSY);
     ReleaseDC(nullptr, dc);
     if (dpi <= 0) dpi = 96;
-    int fontH = -MulDiv(9, dpi, 72);
-    font_ = CreateFontW(fontH, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-                        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                        CLEARTYPE_QUALITY, FF_DONTCARE, L"Microsoft YaHei");
+    font_ = gdiutil::CreateUiFont(dpi);
 
     state_ = std::make_shared<Shared>();
     state_->bmp = bmp;
@@ -51,7 +54,7 @@ ResultWindow::ResultWindow(Mode mode, HBITMAP bmp) : mode_(mode)
 ResultWindow::~ResultWindow()
 {
     if (font_) DeleteObject(font_);
-    if (state_) { state_->closed = true; state_->hwnd = nullptr; }
+    if (state_) state_->closed = true;
 }
 
 bool ResultWindow::create()
@@ -72,16 +75,8 @@ bool ResultWindow::create()
         nullptr, nullptr, GetModuleHandleW(nullptr), this);
     if (!hwnd_) return false;
     SetWindowLongPtrW(hwnd_, GWLP_USERDATA, (LONG_PTR)this);
-    state_->hwnd = hwnd_;
 
-    HICON hIcon = (HICON)LoadImageW(GetModuleHandleW(nullptr),
-        MAKEINTRESOURCEW(IDI_APP), IMAGE_ICON,
-        GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_SHARED);
-    if (hIcon)
-    {
-        SendMessageW(hwnd_, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
-        SendMessageW(hwnd_, WM_SETICON, ICON_BIG,   (LPARAM)hIcon);
-    }
+    gdiutil::SetAppIcon(hwnd_);
 
     edit_ = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
         WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | ES_WANTRETURN,
@@ -100,6 +95,36 @@ bool ResultWindow::create()
         hwnd_, (HMENU)4, GetModuleHandleW(nullptr), nullptr);
     for (HWND b : {copyBtn_, retryBtn_, closeBtn_})
         SendMessageW(b, WM_SETFONT, (WPARAM)font_, TRUE);
+
+    if (mode_ == Mode::Translate)
+    {
+        HINSTANCE inst = GetModuleHandleW(nullptr);
+        langLabel_ = CreateWindowExW(0, L"STATIC", L"目标语言:",
+            WS_CHILD | WS_VISIBLE | SS_CENTERIMAGE,
+            0, 0, 62, 20, hwnd_, nullptr, inst, nullptr);
+        langCombo_ = CreateWindowExW(0, L"COMBOBOX", L"",
+            WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
+            0, 0, 200, 220, hwnd_, (HMENU)5, inst, nullptr);
+
+        std::wstring cur = util::ToWide(g_settings.translateTargetLanguage);
+        int sel = -1;
+        int i = 0;
+        for (const auto& lang : TranslateLanguageList())
+        {
+            SendMessageW(langCombo_, CB_ADDSTRING, 0, (LPARAM)lang.c_str());
+            if (lang == cur) sel = i;
+            i++;
+        }
+        if (sel < 0 && !cur.empty())
+        {
+            SendMessageW(langCombo_, CB_ADDSTRING, 0, (LPARAM)cur.c_str());
+            sel = i;
+        }
+        if (sel >= 0) SendMessageW(langCombo_, CB_SETCURSEL, sel, 0);
+
+        SendMessageW(langLabel_, WM_SETFONT, (WPARAM)font_, TRUE);
+        SendMessageW(langCombo_, WM_SETFONT, (WPARAM)font_, TRUE);
+    }
 
     EnableWindow(retryBtn_, FALSE);
     onLayout();
@@ -148,30 +173,36 @@ LRESULT CALLBACK ResultWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
             }
             else if (id == 3) { self->runAi(); }
             else if (id == 4) { DestroyWindow(hwnd); }
+            else if (id == 5 && HIWORD(wp) == CBN_SELCHANGE) { self->onLanguageChanged(); }
             return 0;
         }
         case WM_APP_AI_RESULT:
         {
             if (!self) return 0;
+            self->aiInflight_ = false;
             std::wstring text;
             int kind = 0;
             {
                 std::lock_guard<std::mutex> lk(self->state_->mtx);
-                self->state_->ready = false;
                 kind = self->state_->kind;
                 text = std::move(self->state_->text);
             }
             if (kind == 0)
             {
-                if (self->state_->bmp) { DeleteObject((HGDIOBJ)self->state_->bmp); self->state_->bmp = nullptr; }
+                if (self->state_->bmp)
+                {
+                    bool keepBmp = (self->mode_ == Mode::Translate && g_settings.api.textModel.empty());
+                    if (!keepBmp) { DeleteObject((HGDIOBJ)self->state_->bmp); self->state_->bmp = nullptr; }
+                }
                 self->setResult(text);
                 EnableWindow(self->retryBtn_, FALSE);
             }
             else
             {
-                self->setError(text);
+                self->setResult(text);
                 EnableWindow(self->retryBtn_, TRUE);
             }
+            if (self->langCombo_) EnableWindow(self->langCombo_, TRUE);
             return 0;
         }
         case WM_CLOSE:
@@ -191,12 +222,9 @@ LRESULT CALLBACK ResultWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
             if (self)
             {
                 self->state_->closed = true;
-                self->state_->hwnd = nullptr;
                 self->hwnd_ = nullptr;
                 SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
-                CloseCb cb = std::move(self->closeCb_);
                 delete self;
-                if (cb) cb();
             }
             return 0;
     }
@@ -224,6 +252,33 @@ void ResultWindow::onLayout()
     cx -= bw; MoveWindow(closeBtn_, cx, by, bw, bh, TRUE); cx -= 8;
     cx -= bw; MoveWindow(retryBtn_, cx, by, bw, bh, TRUE); cx -= 8;
     cx -= bw; MoveWindow(copyBtn_,  cx, by, bw, bh, TRUE);
+
+    if (langCombo_)
+    {
+        int comboH = (int)SendMessageW(langCombo_, CB_GETITEMHEIGHT, (WPARAM)-1, 0);
+        if (comboH <= 0) comboH = 24;
+        int cy = by + (bh - comboH) / 2;
+        if (cy < by) cy = by;
+
+        int labelW = 66;
+        int textH = comboH;
+        {
+            HDC dc = GetDC(hwnd_);
+            HGDIOBJ oldFont = SelectObject(dc, font_);
+            SIZE sz = {0, 0};
+            if (GetTextExtentPoint32W(dc, L"目标语言:", 5, &sz))
+            {
+                if (sz.cx > 0) labelW = sz.cx + 6;
+                if (sz.cy > 0) textH = sz.cy;
+            }
+            SelectObject(dc, oldFont);
+            ReleaseDC(hwnd_, dc);
+        }
+
+        int labelCy = cy + (comboH - textH) / 2;
+        MoveWindow(langLabel_, pad, labelCy, labelW, textH, TRUE);
+        MoveWindow(langCombo_, pad + labelW + 8, cy, 200, 400, TRUE);
+    }
 }
 
 static std::wstring NormalizeLineBreaks(const std::wstring& s)
@@ -249,22 +304,34 @@ void ResultWindow::setLoading(const std::wstring& msg)
 {
     SetWindowTextW(edit_, NormalizeLineBreaks(msg).c_str());
     EnableWindow(retryBtn_, FALSE);
+    if (langCombo_) EnableWindow(langCombo_, FALSE);
 }
 
 void ResultWindow::setResult(const std::wstring& text)
 {
     SetWindowTextW(edit_, NormalizeLineBreaks(text).c_str());
-    EnableWindow(retryBtn_, TRUE);
 }
 
-void ResultWindow::setError(const std::wstring& msg)
+void ResultWindow::onLanguageChanged()
 {
-    setResult(msg);
+    int sel = (int)SendMessageW(langCombo_, CB_GETCURSEL, 0, 0);
+    if (sel < 0) return;
+    wchar_t lang[64] = {0};
+    SendMessageW(langCombo_, CB_GETLBTEXT, sel, (LPARAM)lang);
+    if (util::ToWide(g_settings.translateTargetLanguage) == lang) return;
+
+    g_settings.translateTargetLanguage = util::ToUtf8(lang);
+    SaveSettings(g_settings);
+    SetWindowTextW(hwnd_, (L"翻译 -> " + std::wstring(lang)).c_str());
+    runAi();
 }
 
 void ResultWindow::runAi()
 {
-    if (!state_->bmp) return;
+    if (aiInflight_) return;
+    bool needBmp = (mode_ != Mode::Translate) || !state_->ocrDone.load();
+    if (needBmp && !state_->bmp) return;
+    aiInflight_ = true;
     state_->closed = false;
     setLoading(L"正在处理…");
 
@@ -284,7 +351,32 @@ void ResultWindow::runAi()
             std::string r;
             if (mode == Mode::Ocr)        r = ai.ocr(state->bmp, settings);
             else if (mode == Mode::Ai)    r = ai.analyze(state->bmp, settings);
-            else                          r = ai.translate(ai.ocr(state->bmp, settings), settings);
+            else
+            {
+                if (settings.api.textModel.empty())
+                {
+                    r = ai.translateDirect(state->bmp, settings);
+                }
+                else
+                {
+                    if (!state->ocrDone.load())
+                    {
+                        std::string ocr = ai.ocr(state->bmp, settings);
+                        std::lock_guard<std::mutex> lk(state->mtx);
+                        state->ocrText = ocr;
+                        state->ocrDone = true;
+                    }
+                    std::string src;
+                    {
+                        std::lock_guard<std::mutex> lk(state->mtx);
+                        src = state->ocrText;
+                    }
+                    r = ai.translate(src, settings);
+                    if (r.find("无需翻译") != std::string::npos ||
+                        r.find("already in") != std::string::npos)
+                        r = src;
+                }
+            }
             if (r.empty()) r = "（未返回内容）";
             text = util::ToWide(r);
         }
@@ -294,9 +386,14 @@ void ResultWindow::runAi()
             text = util::ToWide(std::string("失败：") + e.what());
             logger::error("AI run failed: " + std::string(e.what()));
         }
+        catch (...)
+        {
+            kind = 1;
+            text = L"失败：发生未知错误";
+            logger::error("AI run failed: unknown exception");
+        }
         {
             std::lock_guard<std::mutex> lk(state->mtx);
-            state->ready = true;
             state->kind = kind;
             state->text = std::move(text);
         }

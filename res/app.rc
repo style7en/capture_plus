@@ -22,9 +22,7 @@ BEGIN
     EDITTEXT                                    IDC_VISIONMODEL_EDIT, 80, 56,  200, 11, ES_AUTOHSCROLL
     LTEXT           "文本模型:",               -1,                   20, 76,  55,  8
     EDITTEXT                                    IDC_TEXTMODEL_EDIT,   80, 74,  200, 11, ES_AUTOHSCROLL
-
-    LTEXT           "翻译目标语言:",            -1,                   10, 104, 70,  8
-    COMBOBOX                                    IDC_TRANSLATE_COMBO,  80, 102, 200, 120, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "（可选，不填则用视觉模型直接翻译）", -1,                   80, 87,  200, 8
 
     LTEXT           "截图快捷键:",              -1,                   10, 124, 70,  8
     EDITTEXT                                    IDC_HOTKEY_EDIT,      80, 122, 130, 11, ES_AUTOHSCROLL | ES_READONLY

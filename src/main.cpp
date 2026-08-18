@@ -85,7 +85,7 @@ int APIENTRY wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
 
     g_hotkey = new HotkeyManager();
     g_hotkey->setCallback(startScreenshot);
-    if (!g_hotkey->registerHotkey(g_settings.hotkey) && g_tray)
+    if (!g_hotkey->registerHotkey(g_settings.hotkey))
         g_tray->showBalloon(L"快捷键被占用，请在设置中更换", 2500);
 
     g_session = new ScreenshotSession();
@@ -97,14 +97,18 @@ int APIENTRY wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
         DispatchMessageW(&msg);
     }
 
-    ResultWindow::WaitForAiTasks(5000);
+    ResultWindow::WaitForAiTasks(15000);
     delete g_session;
     delete g_hotkey;
     delete g_tray;
     OverlayWindow::shutdown();
     ShutdownSettingsFont();
     gdiutil::GdiShutdown();
-    if (mutex) { ReleaseMutex(mutex); CloseHandle(mutex); }
+    if (mutex) { ReleaseMutex(mutex); CloseHandle(mutex); mutex = nullptr; }
+
+    if (ResultWindow::HasInFlightAi())
+        TerminateProcess(GetCurrentProcess(), 0);
+
     CoUninitialize();
     return (int)msg.wParam;
 }

@@ -1,4 +1,5 @@
 #include "SettingsWindow.h"
+#include "GdiUtil.h"
 #include "HotkeyManager.h"
 #include "TrayIcon.h"
 #include "Logger.h"
@@ -6,11 +7,6 @@
 #include "resource.h"
 
 static UINT_PTR g_hotkeySubclassId = 100;
-
-static const wchar_t* const kLanguages[] = {
-    L"中文（简体）", L"中文（繁體）", L"English", L"日本語",
-    L"한국어", L"Français", L"Deutsch", L"Español", L"Русский",
-};
 
 static HFONT g_dlgFont = nullptr;
 
@@ -22,10 +18,7 @@ static void setDlgFont(HWND dlg)
         int dpi = GetDeviceCaps(dc, LOGPIXELSY);
         ReleaseDC(nullptr, dc);
         if (dpi <= 0) dpi = 96;
-        int h = -MulDiv(9, dpi, 72);
-        g_dlgFont = CreateFontW(h, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-            CLEARTYPE_QUALITY, FF_DONTCARE, L"Microsoft YaHei");
+        g_dlgFont = gdiutil::CreateUiFont(dpi);
     }
     if (g_dlgFont)
     {
@@ -68,15 +61,7 @@ static INT_PTR CALLBACK DlgProc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp)
             ctx = (SettingsContext*)lp;
             SetWindowLongPtrW(dlg, GWLP_USERDATA, (LONG_PTR)ctx);
             setDlgFont(dlg);
-
-            HICON hIcon = (HICON)LoadImageW(GetModuleHandleW(nullptr),
-                MAKEINTRESOURCEW(IDI_APP), IMAGE_ICON,
-                GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_SHARED);
-            if (hIcon)
-            {
-                SendMessageW(dlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
-                SendMessageW(dlg, WM_SETICON, ICON_BIG,   (LPARAM)hIcon);
-            }
+            gdiutil::SetAppIcon(dlg);
 
             HWND hk = GetDlgItem(dlg, IDC_HOTKEY_EDIT);
             SetWindowSubclass(hk, HotkeyEditProc, g_hotkeySubclassId, (DWORD_PTR)ctx);
@@ -96,17 +81,6 @@ static INT_PTR CALLBACK DlgProc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp)
                 util::ToWide(ctx->settings->api.visionModel).c_str());
             SetWindowTextW(GetDlgItem(dlg, IDC_TEXTMODEL_EDIT),
                 util::ToWide(ctx->settings->api.textModel).c_str());
-
-            HWND combo = GetDlgItem(dlg, IDC_TRANSLATE_COMBO);
-            std::wstring cur = util::ToWide(ctx->settings->translateTargetLanguage);
-            int sel = -1;
-            for (int i = 0; i < (int)(sizeof(kLanguages)/sizeof(kLanguages[0])); i++)
-            {
-                SendMessageW(combo, CB_ADDSTRING, 0, (LPARAM)kLanguages[i]);
-                if (wcscmp(kLanguages[i], cur.c_str()) == 0) sel = i;
-            }
-            if (sel < 0) { SendMessageW(combo, CB_ADDSTRING, 0, (LPARAM)cur.c_str()); sel = (int)(sizeof(kLanguages)/sizeof(kLanguages[0])); }
-            SendMessageW(combo, CB_SETCURSEL, sel, 0);
             return TRUE;
         }
         case WM_COMMAND:
@@ -125,24 +99,16 @@ static INT_PTR CALLBACK DlgProc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp)
                 }
                 case IDC_SETTINGS_OK:
                 {
-                    wchar_t buf[MAX_PATH];
+                    auto getEdit = [&](int id) -> std::string {
+                        wchar_t buf[MAX_PATH];
+                        GetWindowTextW(GetDlgItem(dlg, id), buf, MAX_PATH);
+                        return util::ToUtf8(buf);
+                    };
                     ctx->settings->hotkey = HotkeyFormat(ctx->capturedMods, ctx->capturedVk);
-                    GetWindowTextW(GetDlgItem(dlg, IDC_BASEURL_EDIT), buf, MAX_PATH);
-                    ctx->settings->api.baseUrl = util::ToUtf8(buf);
-                    GetWindowTextW(GetDlgItem(dlg, IDC_APIKEY_EDIT), buf, MAX_PATH);
-                    ctx->settings->api.apiKey = util::ToUtf8(buf);
-                    GetWindowTextW(GetDlgItem(dlg, IDC_VISIONMODEL_EDIT), buf, MAX_PATH);
-                    ctx->settings->api.visionModel = util::ToUtf8(buf);
-                    GetWindowTextW(GetDlgItem(dlg, IDC_TEXTMODEL_EDIT), buf, MAX_PATH);
-                    ctx->settings->api.textModel = util::ToUtf8(buf);
-                    HWND combo = GetDlgItem(dlg, IDC_TRANSLATE_COMBO);
-                    int sel = (int)SendMessageW(combo, CB_GETCURSEL, 0, 0);
-                    if (sel >= 0)
-                    {
-                        wchar_t lang[64] = {0};
-                        SendMessageW(combo, CB_GETLBTEXT, sel, (LPARAM)lang);
-                        ctx->settings->translateTargetLanguage = util::ToUtf8(lang);
-                    }
+                    ctx->settings->api.baseUrl     = getEdit(IDC_BASEURL_EDIT);
+                    ctx->settings->api.apiKey      = getEdit(IDC_APIKEY_EDIT);
+                    ctx->settings->api.visionModel = getEdit(IDC_VISIONMODEL_EDIT);
+                    ctx->settings->api.textModel   = getEdit(IDC_TEXTMODEL_EDIT);
 
                     SaveSettings(*ctx->settings);
                     if (ctx->hotkey && !ctx->hotkey->reRegister(ctx->settings->hotkey))

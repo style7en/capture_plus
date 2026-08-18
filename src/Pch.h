@@ -24,7 +24,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <cstdarg>
 #include <ctime>
 #include <thread>
 #include <mutex>
