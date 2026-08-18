@@ -54,7 +54,9 @@ void TrayIcon::showBalloon(const std::wstring& msg, int ms)
     nid_.dwInfoFlags = NIIF_NONE;
     nid_.uTimeout = (UINT)ms;
     wcsncpy(nid_.szInfoTitle, L"CapturePlus", 63);
+    nid_.szInfoTitle[63] = L'\0';
     wcsncpy(nid_.szInfo, msg.c_str(), 255);
+    nid_.szInfo[255] = L'\0';
     Shell_NotifyIconW(NIM_MODIFY, &nid_);
 }
 
@@ -93,7 +95,7 @@ void TrayIcon::showMenu()
         case 1: if (onScreenshot_) onScreenshot_(); break;
         case 2: if (onSettings_)   onSettings_();   break;
         case 3: MessageBoxW(nullptr,
-            L"CapturePlus v1.04\n\n"
+            L"CapturePlus v1.05\n\n"
             L"Windows 截图增强工具。常驻通知栏，按快捷键呼出截图，框选后提供五项操作：\n\n"
             L"  · 复制图片 — 选区位图复制到剪贴板\n"
             L"  · 保存图片 — 保存为 PNG / JPEG / BMP\n"

@@ -43,7 +43,7 @@ private:
     HWND   langLabel_ = nullptr;
     HWND   langCombo_ = nullptr;
     HFONT  font_     = nullptr;
-    Mode   mode_ = Mode::Ocr;
+    Mode   mode_;
     bool   aiInflight_ = false;
 
     std::shared_ptr<Shared> state_;

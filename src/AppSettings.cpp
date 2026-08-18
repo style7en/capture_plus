@@ -122,8 +122,8 @@ AppSettings LoadSettings()
         }
 
         json::Value base, user;
-        if (hasBase) json::parse(baseJson, base);
-        if (hasUser) json::parse(userJson, user);
+        if (hasBase && !json::parse(baseJson, base)) { logger::warn("Failed to parse base settings"); hasBase = false; }
+        if (hasUser && !json::parse(userJson, user)) { logger::warn("Failed to parse user settings"); hasUser = false; }
 
         json::Value merged = (hasBase && hasUser) ? mergeObjects(base, user)
                               : (hasUser ? user : base);
