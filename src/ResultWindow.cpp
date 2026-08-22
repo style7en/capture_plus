@@ -189,10 +189,10 @@ LRESULT CALLBACK ResultWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
             }
             if (kind == 0)
             {
-                if (self->state_->bmp)
+                if (self->state_->bmp && !self->keepBmp_)
                 {
-                    bool keepBmp = (self->mode_ == Mode::Translate && g_settings.api.textModel.empty());
-                    if (!keepBmp) { DeleteObject((HGDIOBJ)self->state_->bmp); self->state_->bmp = nullptr; }
+                    DeleteObject((HGDIOBJ)self->state_->bmp);
+                    self->state_->bmp = nullptr;
                 }
                 self->setResult(text);
                 EnableWindow(self->retryBtn_, FALSE);
@@ -287,15 +287,13 @@ static std::wstring NormalizeLineBreaks(const std::wstring& s)
     out.reserve(s.size());
     for (size_t i = 0; i < s.size(); i++)
     {
-        if (s[i] == L'\n')
+        wchar_t c = s[i];
+        if (c == L'\r')
         {
-            if (i == 0 || s[i - 1] != L'\r') out.push_back(L'\r');
-            out.push_back(L'\n');
+            if (i + 1 < s.size() && s[i + 1] == L'\n') { out += L"\r\n"; i++; }
         }
-        else if (s[i] != L'\r')
-            out.push_back(s[i]);
-        else if (i + 1 < s.size() && s[i + 1] == L'\n')
-            out.push_back(L'\r');
+        else if (c == L'\n') out += L"\r\n";
+        else out.push_back(c);
     }
     return out;
 }
@@ -339,6 +337,7 @@ void ResultWindow::runAi()
     auto state = state_;
     Mode mode = mode_;
     HWND target = hwnd_;
+    keepBmp_ = (mode == Mode::Translate && settings.api.textModel.empty());
     g_inFlightAi.fetch_add(1);
 
     std::thread([state, mode, target, settings]() {
@@ -372,9 +371,6 @@ void ResultWindow::runAi()
                         src = state->ocrText;
                     }
                     r = ai.translate(src, settings);
-                    if (r.find("无需翻译") != std::string::npos ||
-                        r.find("already in") != std::string::npos)
-                        r = src;
                 }
             }
             if (r.empty()) r = "（未返回内容）";

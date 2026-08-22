@@ -45,6 +45,7 @@ private:
     HFONT  font_     = nullptr;
     Mode   mode_;
     bool   aiInflight_ = false;
+    bool   keepBmp_ = false;
 
     std::shared_ptr<Shared> state_;
 };

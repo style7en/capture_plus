@@ -100,8 +100,8 @@ static INT_PTR CALLBACK DlgProc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp)
                 case IDC_SETTINGS_OK:
                 {
                     auto getEdit = [&](int id) -> std::string {
-                        wchar_t buf[MAX_PATH];
-                        GetWindowTextW(GetDlgItem(dlg, id), buf, MAX_PATH);
+                        wchar_t buf[1024];
+                        GetWindowTextW(GetDlgItem(dlg, id), buf, 1024);
                         return util::ToUtf8(buf);
                     };
                     ctx->settings->hotkey = HotkeyFormat(ctx->capturedMods, ctx->capturedVk);

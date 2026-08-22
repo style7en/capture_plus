@@ -28,26 +28,14 @@ static const COLORREF CLR_EDGE        = RGB(72, 72, 78);
 
 static int getDpiForPoint(int px, int py)
 {
-    HMONITOR hmon = MonitorFromPoint({ px, py }, MONITOR_DEFAULTTONEAREST);
-    if (hmon)
-    {
+    using GetDpiForMonitor_t = HRESULT(WINAPI*)(HMONITOR, int, UINT*, UINT*);
+    static GetDpiForMonitor_t fn = []() -> GetDpiForMonitor_t {
         HMODULE shcore = LoadLibraryW(L"shcore.dll");
-        if (shcore)
-        {
-            using GetDpiForMonitor_t = HRESULT(WINAPI*)(HMONITOR, int, UINT*, UINT*);
-            auto fn = (GetDpiForMonitor_t)GetProcAddress(shcore, "GetDpiForMonitor");
-            if (fn)
-            {
-                UINT x = 0, y = 0;
-                if (SUCCEEDED(fn(hmon, 0, &x, &y)) && x > 0)
-                {
-                    FreeLibrary(shcore);
-                    return (int)x;
-                }
-            }
-            FreeLibrary(shcore);
-        }
-    }
+        return shcore ? (GetDpiForMonitor_t)GetProcAddress(shcore, "GetDpiForMonitor") : nullptr;
+    }();
+    HMONITOR hmon = MonitorFromPoint({ px, py }, MONITOR_DEFAULTTONEAREST);
+    UINT x = 0, y = 0;
+    if (fn && hmon && SUCCEEDED(fn(hmon, 0, &x, &y)) && x > 0) return (int)x;
     return 96;
 }
 
@@ -96,11 +84,9 @@ bool ToolbarWindow::create(int x, int y)
 RECT ToolbarWindow::buttonRect(int i) const
 {
     int cx = pad_;
-    for (int j = 0; j < i; j++)
-        cx += ((j == 5) ? cancelW_ : btnW_) + pad_;
-    int w = (i == 5) ? cancelW_ : btnW_;
-    RECT r = { cx, pad_, cx + w, pad_ + btnH_ };
-    return r;
+    for (int j = 0; j < i; j++) cx += btnW_ + pad_;
+    int w = (i == BTN_CANCEL) ? cancelW_ : btnW_;
+    return { cx, pad_, cx + w, pad_ + btnH_ };
 }
 
 int ToolbarWindow::hitTest(int x, int y) const

@@ -66,6 +66,7 @@ void Save(HBITMAP hbmp)
     if (dot)
     {
         std::wstring e = dot;
+        for (auto& c : e) c = (wchar_t)towlower(c);
         if (e == L".jpg" || e == L".jpeg") mime = L"image/jpeg";
         else if (e == L".bmp")             mime = L"image/bmp";
     }

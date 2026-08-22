@@ -104,7 +104,7 @@ int APIENTRY wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int)
     OverlayWindow::shutdown();
     ShutdownSettingsFont();
     gdiutil::GdiShutdown();
-    if (mutex) { ReleaseMutex(mutex); CloseHandle(mutex); mutex = nullptr; }
+    if (mutex) { ReleaseMutex(mutex); CloseHandle(mutex); }
 
     if (ResultWindow::HasInFlightAi())
         TerminateProcess(GetCurrentProcess(), 0);

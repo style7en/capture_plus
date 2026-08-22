@@ -15,10 +15,26 @@ std::string AiService::ocr(HBITMAP bmp, const AppSettings& s)
     return sendVision(bmp, prompts::aiOcr(), s.api.visionModel, s);
 }
 
+static bool looksLikeTranslationRefusal(const std::string& r)
+{
+    static const char* const kPhrases[] = {
+        "无需翻译", "原文已是", "already in", "no translation", "already translated"
+    };
+    std::string lower;
+    lower.reserve(r.size());
+    for (char c : r)
+        lower.push_back((c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c);
+    for (const char* ph : kPhrases)
+        if (lower.find(ph) != std::string::npos) return true;
+    return false;
+}
+
 std::string AiService::translate(const std::string& text, const AppSettings& s)
 {
     if (text.empty()) return "未识别到可翻译文字。";
-    return sendText(prompts::translate(s.translateTargetLanguage, text), s.api.textModel, s);
+    std::string r = sendText(prompts::translate(s.translateTargetLanguage, text), s.api.textModel, s);
+    if (looksLikeTranslationRefusal(r)) return text;
+    return r;
 }
 
 std::string AiService::translateDirect(HBITMAP bmp, const AppSettings& s)
@@ -26,6 +42,21 @@ std::string AiService::translateDirect(HBITMAP bmp, const AppSettings& s)
     std::string prompt = "请将这张图片中的文字翻译为" + s.translateTargetLanguage
         + "，只输出译文，不要添加解释。如果图片中没有文字，请说明。";
     return sendVision(bmp, prompt, s.api.visionModel, s);
+}
+
+static json::Value chatRequest(const std::string& model, json::Value content)
+{
+    json::Value msg = json::Value::makeObject();
+    msg.set("role", json::Value("user"));
+    msg.set("content", std::move(content));
+
+    json::Value messages = json::Value::makeArray();
+    messages.push(std::move(msg));
+
+    json::Value req = json::Value::makeObject();
+    req.set("model", json::Value(model));
+    req.set("messages", std::move(messages));
+    return req;
 }
 
 std::string AiService::sendVision(HBITMAP bmp, const std::string& prompt,
@@ -45,33 +76,13 @@ std::string AiService::sendVision(HBITMAP bmp, const std::string& prompt,
     content.push(std::move(textPart));
     content.push(std::move(imgPart));
 
-    json::Value msg = json::Value::makeObject();
-    msg.set("role", json::Value("user"));
-    msg.set("content", std::move(content));
-
-    json::Value req = json::Value::makeObject();
-    req.set("model", json::Value(model));
-    json::Value messages = json::Value::makeArray();
-    messages.push(std::move(msg));
-    req.set("messages", std::move(messages));
-
-    return sendTextImpl(req, s);
+    return sendTextImpl(chatRequest(model, std::move(content)), s);
 }
 
 std::string AiService::sendText(const std::string& prompt, const std::string& model,
                                 const AppSettings& s)
 {
-    json::Value msg = json::Value::makeObject();
-    msg.set("role", json::Value("user"));
-    msg.set("content", json::Value(prompt));
-
-    json::Value req = json::Value::makeObject();
-    req.set("model", json::Value(model));
-    json::Value messages = json::Value::makeArray();
-    messages.push(std::move(msg));
-    req.set("messages", std::move(messages));
-
-    return sendTextImpl(req, s);
+    return sendTextImpl(chatRequest(model, json::Value(prompt)), s);
 }
 
 std::string AiService::sendTextImpl(const json::Value& req, const AppSettings& s)
@@ -111,42 +122,40 @@ std::string AiService::bitmapToBase64Png(HBITMAP bmp)
 {
     if (!bmp) return "";
 
-    IStream* stream = nullptr;
-    if (FAILED(CreateStreamOnHGlobal(nullptr, TRUE, &stream)) || !stream)
+    IStream* raw = nullptr;
+    if (FAILED(CreateStreamOnHGlobal(nullptr, TRUE, &raw)) || !raw)
         throw std::runtime_error("CreateStreamOnHGlobal failed");
+
+    struct Guard
+    {
+        IStream* stream;
+        HGLOBAL  mem = nullptr;
+        bool     locked = false;
+        ~Guard()
+        {
+            if (locked) GlobalUnlock(mem);
+            if (stream) stream->Release();
+        }
+    } guard{ raw };
 
     CLSID pngClsid;
     if (gdiutil::GetEncoderClsid(L"image/png", &pngClsid) < 0)
-    {
-        stream->Release();
         throw std::runtime_error("No PNG encoder");
-    }
 
     {
         Gdiplus::Bitmap gbmp(bmp, nullptr);
-        Gdiplus::Status st = gbmp.Save(stream, &pngClsid, nullptr);
-        if (st != Gdiplus::Ok)
-        {
-            stream->Release();
+        if (gbmp.Save(guard.stream, &pngClsid, nullptr) != Gdiplus::Ok)
             throw std::runtime_error("Bitmap.Save failed");
-        }
     }
 
-    HGLOBAL hgl = nullptr;
-    if (FAILED(GetHGlobalFromStream(stream, &hgl)) || !hgl)
-    {
-        stream->Release();
+    if (FAILED(GetHGlobalFromStream(guard.stream, &guard.mem)) || !guard.mem)
         throw std::runtime_error("GetHGlobalFromStream failed");
-    }
 
-    SIZE_T size = GlobalSize(hgl);
-    auto* ptr = (const unsigned char*)GlobalLock(hgl);
-    std::string b64;
-    try { b64 = ptr ? util::Base64Encode(ptr, size) : ""; }
-    catch (...) { if (ptr) GlobalUnlock(hgl); stream->Release(); throw; }
-    if (ptr) GlobalUnlock(hgl);
-    stream->Release();
-    return b64;
+    auto* ptr = (const unsigned char*)GlobalLock(guard.mem);
+    if (!ptr) throw std::runtime_error("GlobalLock failed");
+    guard.locked = true;
+
+    return util::Base64Encode(ptr, GlobalSize(guard.mem));
 }
 
 std::string AiService::httpPost(const std::string& host, int port,
