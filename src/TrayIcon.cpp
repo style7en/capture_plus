@@ -95,7 +95,7 @@ void TrayIcon::showMenu()
         case 1: if (onScreenshot_) onScreenshot_(); break;
         case 2: if (onSettings_)   onSettings_();   break;
         case 3: MessageBoxW(nullptr,
-            L"CapturePlus v1.05\n\n"
+            L"CapturePlus v1.06\n\n"
             L"Windows 截图增强工具。常驻通知栏，按快捷键呼出截图，框选后提供五项操作：\n\n"
             L"  · 复制图片 — 选区位图复制到剪贴板\n"
             L"  · 保存图片 — 保存为 PNG / JPEG / BMP\n"
