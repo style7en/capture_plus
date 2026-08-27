@@ -4,9 +4,9 @@ Windows 截图增强工具。常驻系统通知栏，按快捷键呼出区域截
 
 - **复制图片** — 选区位图复制到剪贴板（`CF_DIB`）
 - **保存图片** — 保存为 PNG / JPEG / BMP，默认存入「图片\Screenshots」
-- **提取文字** — 调用 AI 视觉模型 OCR 截图中的文字
+- **提取文字** — 调用 AI 多模态模型 OCR 截图中的文字
 - **AI 分析** — 分析截图内容，图中含提问则直接作答
-- **翻译** — 先 OCR 再翻译为目标语言
+- **翻译** — 翻译为目标语言（多模态模型与文本模型相同时直接图片翻译，否则先 OCR 再翻译）
 
 ## 特性
 
@@ -15,6 +15,7 @@ Windows 截图增强工具。常驻系统通知栏，按快捷键呼出区域截
 - 多显示器 + Per-Monitor DPI Aware V2 自适应
 - 全局热键可自定义
 - 单实例运行
+- 结果窗口支持 **Markdown 预览**：marked + KaTeX 离线渲染数学公式，顶部展示原图、显示耗时
 
 ## 构建
 
@@ -31,9 +32,10 @@ make test       # 编译并运行单元测试
 ## 使用
 
 1. 运行 `capture-plus.exe`，程序常驻通知栏
-2. 默认快捷键 `Ctrl+Alt+A` 截图，或双击通知栏图标
+2. 默认快捷键 `Alt+A` 截图，或双击通知栏图标
 3. 拖拽框选区域 → 工具条选择操作
-4. 右键通知栏图标 →「设置」配置 AI 接口、翻译语言、快捷键
+4. 结果窗口右上角点击「在浏览器中打开」，用默认浏览器打开渲染结果（顶部显示原图、下方 Markdown，完全离线、支持数学公式）
+5. 右键通知栏图标 →「设置」配置 AI 接口、翻译语言、快捷键
 
 ## 配置
 
@@ -41,12 +43,12 @@ make test       # 编译并运行单元测试
 
 | 字段 | 说明 | 默认值 |
 |---|---|---|
-| `Hotkey` | 截图快捷键 | `Ctrl+Alt+A` |
+| `Hotkey` | 截图快捷键 | `Alt+A` |
 | `TranslateTargetLanguage` | 翻译目标语言 | `中文（简体）` |
 | `Api.BaseUrl` | OpenAI 兼容 BaseUrl | `https://api.openai.com/v1` |
 | `Api.ApiKey` | API 密钥 | |
-| `Api.VisionModel` | 视觉模型 | `gpt-4o` |
-| `Api.TextModel` | 文本模型 | `gpt-4o-mini` |
+| `Api.VisionModel` | 多模态模型 | `minimax` |
+| `Api.TextModel` | 文本模型 | `deepseek` |
 
 日志位于 `%APPDATA%\CapturePlus\logs\`。
 
@@ -54,12 +56,13 @@ make test       # 编译并运行单元测试
 
 ```
 capture-plus-win32/
-├── res/                 资源文件（图标、对话框模板、资源 ID）
+├── res/                 资源文件（图标、对话框模板、资源 ID、离线渲染库）
 │   ├── app.ico
 │   ├── app.rc
-│   └── resource.h
+│   ├── resource.h
+│   └── web/             marked / KaTeX 离线资源（内嵌进 exe）
 ├── makefile             构建脚本
-├── src/                 源码（18 个模块）
+├── src/                 源码（19 个模块）
 └── tests/               单元测试（纯逻辑模块）
 ```
 

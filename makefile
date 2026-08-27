@@ -1,5 +1,5 @@
 CXX      = g++
-CXXFLAGS = -std=c++17 -O2 -municode -mwindows -Wall -I. -Isrc -Ires
+CXXFLAGS = -std=c++17 -O2 -municode -mwindows -Wall -MMD -MP -I. -Isrc -Ires
 LDFLAGS  = -s -municode -mwindows -lgdi32 -luser32 -lshell32 -lgdiplus -lwinhttp \
            -lcomctl32 -lcomdlg32 -lole32 -loleaut32 -luuid -lshlwapi -ldwmapi
 
@@ -10,7 +10,7 @@ OBJS     = $(BUILDDIR)/main.o $(BUILDDIR)/Util.o $(BUILDDIR)/Json.o $(BUILDDIR)/
            $(BUILDDIR)/TrayIcon.o $(BUILDDIR)/SelectionTracker.o $(BUILDDIR)/OverlayWindow.o \
            $(BUILDDIR)/ToolbarWindow.o $(BUILDDIR)/GdiUtil.o $(BUILDDIR)/CopyImageService.o \
            $(BUILDDIR)/SaveImageService.o $(BUILDDIR)/AiService.o $(BUILDDIR)/ResultWindow.o \
-           $(BUILDDIR)/SettingsWindow.o $(BUILDDIR)/ScreenshotSession.o
+           $(BUILDDIR)/SettingsWindow.o $(BUILDDIR)/ScreenshotSession.o $(BUILDDIR)/MarkdownPreview.o
 
 TARGET   = capture-plus.exe
 
@@ -36,10 +36,12 @@ clean:
 TEST_SRCS = tests/main.cpp src/Json.cpp src/Util.cpp src/Logger.cpp src/SelectionTracker.cpp src/HotkeyManager.cpp
 TEST_LIBS = -luser32 -lshell32 -lole32 -luuid -lshlwapi
 
-tests.exe: $(TEST_SRCS) src/Pch.h
+tests.exe: $(TEST_SRCS) src/Pch.h src/Json.h src/Util.h src/Logger.h src/SelectionTracker.h src/HotkeyManager.h
 	$(CXX) -std=c++17 -O2 -Wall -I. -Isrc -Ires $(TEST_SRCS) -o tests.exe $(TEST_LIBS)
 
 test: tests.exe
 	./tests.exe
+
+-include $(OBJS:.o=.d)
 
 .PHONY: all clean test

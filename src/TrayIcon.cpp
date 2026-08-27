@@ -103,7 +103,8 @@ void TrayIcon::showMenu()
             L"  · AI 分析  — 分析截图内容，图中含提问则直接作答\n"
             L"  · 翻译     — 先 OCR 再翻译为目标语言\n\n"
             L"支持 OpenAI 兼容接口（DeepSeek、通义千问、Ollama 等）。\n"
-            L"多显示器混合 DPI 自适应。", L"关于",
+            L"多显示器混合 DPI 自适应。\n\n"
+            L"联系邮箱：zhangjia_86@126.com", L"关于",
             MB_OK | MB_ICONINFORMATION); break;
         case 4: if (onExit_)       onExit_();       break;
     }

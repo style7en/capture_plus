@@ -7,7 +7,32 @@
 
 IDI_APP                  ICON                   "app.ico"
 
-IDR_SETTINGS_DIALOG DIALOGEX 0, 0, 300, 178
+IDR_WEB_MARKED           RCDATA                 "web/marked.min.js"
+IDR_WEB_KATEX_JS         RCDATA                 "web/katex.min.js"
+IDR_WEB_KATEX_CSS        RCDATA                 "web/katex.min.css"
+
+IDR_KTX_FONT_AMS_REG     RCDATA                 "web/fonts/KaTeX_AMS-Regular.woff2"
+IDR_KTX_FONT_CALI_BOLD   RCDATA                 "web/fonts/KaTeX_Caligraphic-Bold.woff2"
+IDR_KTX_FONT_CALI_REG    RCDATA                 "web/fonts/KaTeX_Caligraphic-Regular.woff2"
+IDR_KTX_FONT_FRAKTUR_BOLD RCDATA               "web/fonts/KaTeX_Fraktur-Bold.woff2"
+IDR_KTX_FONT_FRAKTUR_REG RCDATA                 "web/fonts/KaTeX_Fraktur-Regular.woff2"
+IDR_KTX_FONT_MAIN_BOLD   RCDATA                 "web/fonts/KaTeX_Main-Bold.woff2"
+IDR_KTX_FONT_MAIN_BOLDITALIC RCDATA             "web/fonts/KaTeX_Main-BoldItalic.woff2"
+IDR_KTX_FONT_MAIN_ITALIC RCDATA                 "web/fonts/KaTeX_Main-Italic.woff2"
+IDR_KTX_FONT_MAIN_REG    RCDATA                 "web/fonts/KaTeX_Main-Regular.woff2"
+IDR_KTX_FONT_MATH_BOLDITALIC RCDATA             "web/fonts/KaTeX_Math-BoldItalic.woff2"
+IDR_KTX_FONT_MATH_ITALIC RCDATA                 "web/fonts/KaTeX_Math-Italic.woff2"
+IDR_KTX_FONT_SANS_BOLD   RCDATA                 "web/fonts/KaTeX_SansSerif-Bold.woff2"
+IDR_KTX_FONT_SANS_ITALIC RCDATA                 "web/fonts/KaTeX_SansSerif-Italic.woff2"
+IDR_KTX_FONT_SANS_REG    RCDATA                 "web/fonts/KaTeX_SansSerif-Regular.woff2"
+IDR_KTX_FONT_SCRIPT_REG  RCDATA                 "web/fonts/KaTeX_Script-Regular.woff2"
+IDR_KTX_FONT_SIZE1_REG   RCDATA                 "web/fonts/KaTeX_Size1-Regular.woff2"
+IDR_KTX_FONT_SIZE2_REG   RCDATA                 "web/fonts/KaTeX_Size2-Regular.woff2"
+IDR_KTX_FONT_SIZE3_REG   RCDATA                 "web/fonts/KaTeX_Size3-Regular.woff2"
+IDR_KTX_FONT_SIZE4_REG   RCDATA                 "web/fonts/KaTeX_Size4-Regular.woff2"
+IDR_KTX_FONT_TYPEWRITER_REG RCDATA              "web/fonts/KaTeX_Typewriter-Regular.woff2"
+
+IDR_SETTINGS_DIALOG DIALOGEX 0, 0, 300, 164
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "设置"
 FONT 9, "Microsoft YaHei"
@@ -18,16 +43,16 @@ BEGIN
     LTEXT           "ApiKey:",                 -1,                   20, 40,  55,  8
     EDITTEXT                                    IDC_APIKEY_EDIT,     80, 38,  130, 11, ES_AUTOHSCROLL | ES_PASSWORD
     PUSHBUTTON      "显示/隐藏密钥",         IDC_TOGGLE_APIKEY_BTN, 215, 37,  65,  13
-    LTEXT           "视觉模型:",               -1,                   20, 58,  55,  8
+    LTEXT           "多模态模型:",             -1,                   20, 58,  55,  8
     EDITTEXT                                    IDC_VISIONMODEL_EDIT, 80, 56,  200, 11, ES_AUTOHSCROLL
     LTEXT           "文本模型:",               -1,                   20, 76,  55,  8
     EDITTEXT                                    IDC_TEXTMODEL_EDIT,   80, 74,  200, 11, ES_AUTOHSCROLL
-    LTEXT           "（可选，不填则用视觉模型直接翻译）", -1,                   80, 87,  200, 8
+    LTEXT           "（可选，不填则用多模态模型直接翻译）", -1,         80, 87,  200, 8
 
-    LTEXT           "截图快捷键:",              -1,                   10, 124, 70,  8
-    EDITTEXT                                    IDC_HOTKEY_EDIT,      80, 122, 130, 11, ES_AUTOHSCROLL | ES_READONLY
-    LTEXT           "(点击后按下新组合键)",      -1,                   215, 124, 75, 8
+    LTEXT           "截图快捷键:",              -1,                   10, 112, 70,  8
+    EDITTEXT                                    IDC_HOTKEY_EDIT,      80, 110, 130, 11, ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "(点击后按下新组合键)",      -1,                   215, 112, 75, 8
 
-    DEFPUSHBUTTON   "确定",                    IDC_SETTINGS_OK,      145, 152,  50,  14
-    PUSHBUTTON      "取消",                    IDC_SETTINGS_CANCEL,  205, 152,  50,  14
+    DEFPUSHBUTTON   "确定",                    IDC_SETTINGS_OK,      145, 138,  50,  14
+    PUSHBUTTON      "取消",                    IDC_SETTINGS_CANCEL,  205, 138,  50,  14
 END

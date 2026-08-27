@@ -5,13 +5,13 @@ struct ApiSettings
 {
     std::string baseUrl      = "https://api.openai.com/v1";
     std::string apiKey;
-    std::string visionModel  = "gpt-4o";
-    std::string textModel    = "gpt-4o-mini";
+    std::string visionModel  = "minimax";
+    std::string textModel    = "deepseek";
 };
 
 struct AppSettings
 {
-    std::string hotkey               = "Ctrl+Alt+A";
+    std::string hotkey               = "Alt+A";
     ApiSettings  api;
     std::string translateTargetLanguage = "中文（简体）";
 };

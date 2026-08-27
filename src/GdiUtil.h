@@ -26,5 +26,6 @@ HGLOBAL  HBitmapToDibGlobal(HBITMAP hbmp);
 
 int  GetEncoderClsid(const wchar_t* format, CLSID* clsid);
 bool SaveHBitmapToFile(HBITMAP hbmp, const wchar_t* path, const wchar_t* format);
+std::string HBitmapToBase64Png(HBITMAP hbmp);
 
 }

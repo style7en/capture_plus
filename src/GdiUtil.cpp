@@ -1,5 +1,6 @@
 #include "GdiUtil.h"
 #include "Logger.h"
+#include "Util.h"
 #include "resource.h"
 
 namespace gdiutil {
@@ -147,6 +148,52 @@ bool SaveHBitmapToFile(HBITMAP hbmp, const wchar_t* path, const wchar_t* format)
         return false;
     }
     return true;
+}
+
+std::string HBitmapToBase64Png(HBITMAP hbmp)
+{
+    if (!hbmp) return "";
+
+    IStream* raw = nullptr;
+    if (FAILED(CreateStreamOnHGlobal(nullptr, TRUE, &raw)) || !raw)
+        throw std::runtime_error("CreateStreamOnHGlobal failed");
+
+    struct Guard
+    {
+        IStream* stream;
+        HGLOBAL  mem = nullptr;
+        bool    locked = false;
+        ~Guard()
+        {
+            if (locked) GlobalUnlock(mem);
+            if (stream) stream->Release();
+        }
+    } guard{ raw };
+
+    Gdiplus::GdiplusStartupInput gsi;
+    ULONG_PTR gdiToken = 0;
+    if (Gdiplus::GdiplusStartup(&gdiToken, &gsi, nullptr) != Gdiplus::Ok)
+        throw std::runtime_error("GdiplusStartup failed");
+    struct GdiGuard { ULONG_PTR t; ~GdiGuard(){ if (t) Gdiplus::GdiplusShutdown(t); } } gdiGuard{ gdiToken };
+
+    CLSID pngClsid;
+    if (GetEncoderClsid(L"image/png", &pngClsid) < 0)
+        throw std::runtime_error("No PNG encoder");
+
+    {
+        Gdiplus::Bitmap gbmp(hbmp, nullptr);
+        if (gbmp.Save(guard.stream, &pngClsid, nullptr) != Gdiplus::Ok)
+            throw std::runtime_error("Bitmap.Save failed");
+    }
+
+    if (FAILED(GetHGlobalFromStream(guard.stream, &guard.mem)) || !guard.mem)
+        throw std::runtime_error("GetHGlobalFromStream failed");
+
+    auto* ptr = (const unsigned char*)GlobalLock(guard.mem);
+    if (!ptr) throw std::runtime_error("GlobalLock failed");
+    guard.locked = true;
+
+    return util::Base64Encode(ptr, GlobalSize(guard.mem));
 }
 
 }

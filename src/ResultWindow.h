@@ -25,13 +25,15 @@ private:
         int  kind = 0;
         std::wstring text;
         std::string ocrText;
+        ULONGLONG elapsedMs = 0;
         ~Shared() { if (bmp) DeleteObject((HGDIOBJ)bmp); }
     };
 
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
     void runAi();
     void onLanguageChanged();
-    void setLoading(const std::wstring& msg);
+    void onPreviewLink();
+    void setLoading();
     void setResult(const std::wstring& text);
     void onLayout();
 
@@ -42,10 +44,11 @@ private:
     HWND   closeBtn_ = nullptr;
     HWND   langLabel_ = nullptr;
     HWND   langCombo_ = nullptr;
+    HWND   previewLink_ = nullptr;
+    HWND   elapsedLabel_ = nullptr;
     HFONT  font_     = nullptr;
     Mode   mode_;
     bool   aiInflight_ = false;
-    bool   keepBmp_ = false;
 
     std::shared_ptr<Shared> state_;
 };

@@ -18,7 +18,6 @@ private:
                          const AppSettings& s);
     std::string sendTextImpl(const json::Value& req, const AppSettings& s);
 
-    static std::string bitmapToBase64Png(HBITMAP bmp);
     static std::string httpPost(const std::string& host, int port,
                                 const std::string& path, bool https,
                                 const std::string& headers,

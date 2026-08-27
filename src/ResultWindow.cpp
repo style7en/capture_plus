@@ -3,6 +3,7 @@
 #include "AppSettings.h"
 #include "GdiUtil.h"
 #include "Logger.h"
+#include "MarkdownPreview.h"
 #include "Util.h"
 #include "resource.h"
 
@@ -70,7 +71,7 @@ bool ResultWindow::create()
     int x = (sw - W) / 2;
     int y = (sh - H) / 2;
     hwnd_ = CreateWindowExW(0, KC_RESULT, title.c_str(),
-        WS_OVERLAPPEDWINDOW,
+        WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
         x, y, W, H,
         nullptr, nullptr, GetModuleHandleW(nullptr), this);
     if (!hwnd_) return false;
@@ -95,6 +96,17 @@ bool ResultWindow::create()
         hwnd_, (HMENU)4, GetModuleHandleW(nullptr), nullptr);
     for (HWND b : {copyBtn_, retryBtn_, closeBtn_})
         SendMessageW(b, WM_SETFONT, (WPARAM)font_, TRUE);
+
+    previewLink_ = CreateWindowExW(0, WC_LINK,
+        L"<a href=\"preview\">在浏览器中打开</a>",
+        WS_CHILD | WS_VISIBLE,
+        0, 0, 120, 24, hwnd_, (HMENU)6, GetModuleHandleW(nullptr), nullptr);
+    SendMessageW(previewLink_, WM_SETFONT, (WPARAM)font_, TRUE);
+
+    elapsedLabel_ = CreateWindowExW(0, L"STATIC", L"",
+        WS_CHILD | WS_VISIBLE | SS_LEFT | SS_CENTERIMAGE,
+        0, 0, 96, 24, hwnd_, nullptr, GetModuleHandleW(nullptr), nullptr);
+    SendMessageW(elapsedLabel_, WM_SETFONT, (WPARAM)font_, TRUE);
 
     if (mode_ == Mode::Translate)
     {
@@ -176,24 +188,37 @@ LRESULT CALLBACK ResultWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
             else if (id == 5 && HIWORD(wp) == CBN_SELCHANGE) { self->onLanguageChanged(); }
             return 0;
         }
+        case WM_NOTIFY:
+        {
+            auto* hdr = (LPNMHDR)lp;
+            if (hdr && hdr->idFrom == 6 &&
+                (hdr->code == NM_CLICK || hdr->code == NM_RETURN) && self)
+                self->onPreviewLink();
+            return 0;
+        }
         case WM_APP_AI_RESULT:
         {
             if (!self) return 0;
             self->aiInflight_ = false;
             std::wstring text;
             int kind = 0;
+            ULONGLONG elapsedMs = 0;
             {
                 std::lock_guard<std::mutex> lk(self->state_->mtx);
                 kind = self->state_->kind;
                 text = std::move(self->state_->text);
+                elapsedMs = self->state_->elapsedMs;
+            }
+            if (self->elapsedLabel_)
+            {
+                unsigned long whole = (unsigned long)(elapsedMs / 1000);
+                unsigned long tenths = (unsigned long)((elapsedMs % 1000) / 100);
+                std::wstring msg = L"耗时 " + std::to_wstring(whole) +
+                                   L"." + std::to_wstring(tenths) + L"s";
+                SetWindowTextW(self->elapsedLabel_, msg.c_str());
             }
             if (kind == 0)
             {
-                if (self->state_->bmp && !self->keepBmp_)
-                {
-                    DeleteObject((HGDIOBJ)self->state_->bmp);
-                    self->state_->bmp = nullptr;
-                }
                 self->setResult(text);
                 EnableWindow(self->retryBtn_, FALSE);
             }
@@ -210,6 +235,7 @@ LRESULT CALLBACK ResultWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
             return 0;
         case WM_SIZE:
             if (self) self->onLayout();
+            if (self && self->hwnd_) InvalidateRect(self->hwnd_, nullptr, TRUE);
             return 0;
         case WM_GETMINMAXINFO:
         {
@@ -242,10 +268,50 @@ void ResultWindow::onLayout()
     int pad = 10;
     int bw = 100, bh = 40;
     int bottomH = bh + pad;
-    int editH = H - bottomH - pad * 2;
-    if (editH < 40) editH = 40;
 
-    MoveWindow(edit_, pad, pad, W - pad * 2, editH, TRUE);
+    int rowH = 0;
+    int linkW = 0, linkH = 0;
+    int elW = 0, elH = 0;
+    {
+        HDC dc = GetDC(hwnd_);
+        HGDIOBJ oldFont = SelectObject(dc, font_);
+        SIZE sz = {0, 0};
+        if (previewLink_)
+        {
+            static const wchar_t* kLinkText = L"在浏览器中打开";
+            if (GetTextExtentPoint32W(dc, kLinkText, lstrlenW(kLinkText), &sz))
+            {
+                linkW = sz.cx + 16;
+                linkH = sz.cy + 4;
+            }
+        }
+        if (elapsedLabel_)
+        {
+            static const wchar_t* kElText = L"耗时 88.8s";
+            if (GetTextExtentPoint32W(dc, kElText, lstrlenW(kElText), &sz))
+            {
+                elW = sz.cx + 8;
+                elH = sz.cy + 4;
+            }
+        }
+        SelectObject(dc, oldFont);
+        ReleaseDC(hwnd_, dc);
+        if (linkW < 60) linkW = 60;
+        if (linkH < 20) linkH = 20;
+        if (elH < 20) elH = 20;
+        if (linkH > rowH) rowH = linkH;
+        if (elH > rowH) rowH = elH;
+    }
+    if (previewLink_)
+        MoveWindow(previewLink_, W - pad - linkW, pad + (rowH - linkH) / 2, linkW, linkH, TRUE);
+    if (elapsedLabel_)
+        MoveWindow(elapsedLabel_, pad, pad + (rowH - elH) / 2, elW, elH, TRUE);
+
+    int topH = (rowH > 0) ? rowH + pad : 0;
+    int editTop = pad + topH;
+    int editH = H - bottomH - pad - editTop;
+    if (editH < 40) editH = 40;
+    MoveWindow(edit_, pad, editTop, W - pad * 2, editH, TRUE);
 
     int by = H - pad - bh;
     int cx = W - pad;
@@ -298,11 +364,32 @@ static std::wstring NormalizeLineBreaks(const std::wstring& s)
     return out;
 }
 
-void ResultWindow::setLoading(const std::wstring& msg)
+void ResultWindow::onPreviewLink()
 {
-    SetWindowTextW(edit_, NormalizeLineBreaks(msg).c_str());
+    int len = GetWindowTextLengthW(edit_);
+    if (len < 0) len = 0;
+    std::wstring txt(len + 1, L'\0');
+    GetWindowTextW(edit_, &txt[0], len + 1);
+    txt.resize(len);
+
+    std::string imgB64;
+    if (state_->bmp)
+    {
+        try { imgB64 = gdiutil::HBitmapToBase64Png(state_->bmp); }
+        catch (...) { imgB64.clear(); }
+    }
+
+    if (!mdpreview::OpenInBrowser(txt, imgB64))
+        MessageBoxW(hwnd_, L"打开预览失败，请查看日志。", L"CapturePlus",
+                    MB_OK | MB_ICONERROR);
+}
+
+void ResultWindow::setLoading()
+{
+    SetWindowTextW(edit_, L"");
     EnableWindow(retryBtn_, FALSE);
     if (langCombo_) EnableWindow(langCombo_, FALSE);
+    if (elapsedLabel_) SetWindowTextW(elapsedLabel_, L"正在处理...");
 }
 
 void ResultWindow::setResult(const std::wstring& text)
@@ -327,20 +414,25 @@ void ResultWindow::onLanguageChanged()
 void ResultWindow::runAi()
 {
     if (aiInflight_) return;
-    bool needBmp = (mode_ != Mode::Translate) || !state_->ocrDone.load();
+
+    AppSettings settings = g_settings;
+    bool directTranslate = (mode_ == Mode::Translate) &&
+        (settings.api.textModel.empty() ||
+         settings.api.textModel == settings.api.visionModel);
+    bool needBmp = (mode_ != Mode::Translate) || directTranslate ||
+                   !state_->ocrDone.load();
     if (needBmp && !state_->bmp) return;
     aiInflight_ = true;
     state_->closed = false;
-    setLoading(L"正在处理…");
+    setLoading();
 
-    AppSettings settings = g_settings;
     auto state = state_;
     Mode mode = mode_;
     HWND target = hwnd_;
-    keepBmp_ = (mode == Mode::Translate && settings.api.textModel.empty());
+    ULONGLONG startMs = GetTickCount64();
     g_inFlightAi.fetch_add(1);
 
-    std::thread([state, mode, target, settings]() {
+    std::thread([state, mode, target, settings, directTranslate, startMs]() {
         struct Guard { ~Guard() { g_inFlightAi.fetch_sub(1); } } guard;
         std::wstring text;
         int kind = 0;
@@ -352,7 +444,7 @@ void ResultWindow::runAi()
             else if (mode == Mode::Ai)    r = ai.analyze(state->bmp, settings);
             else
             {
-                if (settings.api.textModel.empty())
+                if (directTranslate)
                 {
                     r = ai.translateDirect(state->bmp, settings);
                 }
@@ -392,6 +484,7 @@ void ResultWindow::runAi()
             std::lock_guard<std::mutex> lk(state->mtx);
             state->kind = kind;
             state->text = std::move(text);
+            state->elapsedMs = GetTickCount64() - startMs;
         }
         if (!state->closed.load() && IsWindow(target))
             PostMessageW(target, WM_APP_AI_RESULT, 0, 0);
