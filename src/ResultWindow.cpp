@@ -80,31 +80,31 @@ bool ResultWindow::create()
     gdiutil::SetAppIcon(hwnd_);
 
     edit_ = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
-        WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | ES_WANTRETURN,
+        WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | ES_WANTRETURN,
         10, 10, W - 30, H - 70, hwnd_, (HMENU)1, GetModuleHandleW(nullptr), nullptr);
     SendMessageW(edit_, WM_SETFONT, (WPARAM)font_, TRUE);
 
     int bw = 100, bh = 40;
     copyBtn_  = CreateWindowExW(0, L"BUTTON", L"复制",
-        WS_CHILD | WS_VISIBLE, 0, 0, bw, bh,
+        WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS, 0, 0, bw, bh,
         hwnd_, (HMENU)2, GetModuleHandleW(nullptr), nullptr);
     retryBtn_ = CreateWindowExW(0, L"BUTTON", L"重试",
-        WS_CHILD | WS_VISIBLE, 0, 0, bw, bh,
+        WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS, 0, 0, bw, bh,
         hwnd_, (HMENU)3, GetModuleHandleW(nullptr), nullptr);
     closeBtn_ = CreateWindowExW(0, L"BUTTON", L"关闭",
-        WS_CHILD | WS_VISIBLE, 0, 0, bw, bh,
+        WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS, 0, 0, bw, bh,
         hwnd_, (HMENU)4, GetModuleHandleW(nullptr), nullptr);
     for (HWND b : {copyBtn_, retryBtn_, closeBtn_})
         SendMessageW(b, WM_SETFONT, (WPARAM)font_, TRUE);
 
     previewLink_ = CreateWindowExW(0, WC_LINK,
         L"<a href=\"preview\">在浏览器中打开</a>",
-        WS_CHILD | WS_VISIBLE,
+        WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS,
         0, 0, 120, 24, hwnd_, (HMENU)6, GetModuleHandleW(nullptr), nullptr);
     SendMessageW(previewLink_, WM_SETFONT, (WPARAM)font_, TRUE);
 
     elapsedLabel_ = CreateWindowExW(0, L"STATIC", L"",
-        WS_CHILD | WS_VISIBLE | SS_LEFT | SS_CENTERIMAGE,
+        WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | SS_LEFT | SS_CENTERIMAGE,
         0, 0, 96, 24, hwnd_, nullptr, GetModuleHandleW(nullptr), nullptr);
     SendMessageW(elapsedLabel_, WM_SETFONT, (WPARAM)font_, TRUE);
 
@@ -112,10 +112,10 @@ bool ResultWindow::create()
     {
         HINSTANCE inst = GetModuleHandleW(nullptr);
         langLabel_ = CreateWindowExW(0, L"STATIC", L"目标语言:",
-            WS_CHILD | WS_VISIBLE | SS_CENTERIMAGE,
+            WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | SS_CENTERIMAGE,
             0, 0, 62, 20, hwnd_, nullptr, inst, nullptr);
         langCombo_ = CreateWindowExW(0, L"COMBOBOX", L"",
-            WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
+            WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | CBS_DROPDOWNLIST | WS_VSCROLL,
             0, 0, 200, 220, hwnd_, (HMENU)5, inst, nullptr);
 
         std::wstring cur = util::ToWide(g_settings.translateTargetLanguage);
@@ -195,6 +195,19 @@ LRESULT CALLBACK ResultWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp
                 (hdr->code == NM_CLICK || hdr->code == NM_RETURN) && self)
                 self->onPreviewLink();
             return 0;
+        }
+        case WM_CTLCOLORSTATIC:
+        {
+            HWND ctl = (HWND)lp;
+            if (self && (ctl == self->elapsedLabel_ || ctl == self->previewLink_ ||
+                         ctl == self->langLabel_))
+            {
+                HDC dc = (HDC)wp;
+                SetBkMode(dc, TRANSPARENT);
+                SetTextColor(dc, GetSysColor(COLOR_WINDOWTEXT));
+                return (LRESULT)GetSysColorBrush(COLOR_WINDOW);
+            }
+            break;
         }
         case WM_APP_AI_RESULT:
         {
@@ -302,48 +315,63 @@ void ResultWindow::onLayout()
         if (linkH > rowH) rowH = linkH;
         if (elH > rowH) rowH = elH;
     }
-    if (previewLink_)
-        MoveWindow(previewLink_, W - pad - linkW, pad + (rowH - linkH) / 2, linkW, linkH, TRUE);
-    if (elapsedLabel_)
-        MoveWindow(elapsedLabel_, pad, pad + (rowH - elH) / 2, elW, elH, TRUE);
-
     int topH = (rowH > 0) ? rowH + pad : 0;
     int editTop = pad + topH;
     int editH = H - bottomH - pad - editTop;
     if (editH < 40) editH = 40;
-    MoveWindow(edit_, pad, editTop, W - pad * 2, editH, TRUE);
 
     int by = H - pad - bh;
     int cx = W - pad;
-    cx -= bw; MoveWindow(closeBtn_, cx, by, bw, bh, TRUE); cx -= 8;
-    cx -= bw; MoveWindow(retryBtn_, cx, by, bw, bh, TRUE); cx -= 8;
-    cx -= bw; MoveWindow(copyBtn_,  cx, by, bw, bh, TRUE);
+    cx -= bw; int closeX = cx; cx -= 8;
+    cx -= bw; int retryX = cx; cx -= 8;
+    cx -= bw; int copyX = cx;
 
-    if (langCombo_)
+    HDWP hdwp = BeginDeferWindowPos(8);
+    if (hdwp)
     {
-        int comboH = (int)SendMessageW(langCombo_, CB_GETITEMHEIGHT, (WPARAM)-1, 0);
-        if (comboH <= 0) comboH = 24;
-        int cy = by + (bh - comboH) / 2;
-        if (cy < by) cy = by;
+        const UINT fl = SWP_NOZORDER | SWP_NOACTIVATE;
+        if (previewLink_)
+            hdwp = DeferWindowPos(hdwp, previewLink_, nullptr,
+                W - pad - linkW, pad + (rowH - linkH) / 2, linkW, linkH, fl);
+        if (elapsedLabel_)
+            hdwp = DeferWindowPos(hdwp, elapsedLabel_, nullptr,
+                pad, pad + (rowH - elH) / 2, elW, elH, fl);
+        hdwp = DeferWindowPos(hdwp, edit_, nullptr,
+            pad, editTop, W - pad * 2, editH, fl);
+        hdwp = DeferWindowPos(hdwp, closeBtn_, nullptr, closeX, by, bw, bh, fl);
+        hdwp = DeferWindowPos(hdwp, retryBtn_, nullptr, retryX, by, bw, bh, fl);
+        hdwp = DeferWindowPos(hdwp, copyBtn_,  nullptr, copyX,  by, bw, bh, fl);
 
-        int labelW = 66;
-        int textH = comboH;
+        if (langCombo_)
         {
-            HDC dc = GetDC(hwnd_);
-            HGDIOBJ oldFont = SelectObject(dc, font_);
-            SIZE sz = {0, 0};
-            if (GetTextExtentPoint32W(dc, L"目标语言:", 5, &sz))
+            int fieldH = 24, fieldOff = 0;
+            COMBOBOXINFO cbi = {};
+            cbi.cbSize = sizeof(COMBOBOXINFO);
+            if (GetComboBoxInfo(langCombo_, &cbi))
             {
-                if (sz.cx > 0) labelW = sz.cx + 6;
-                if (sz.cy > 0) textH = sz.cy;
+                fieldH = cbi.rcItem.bottom - cbi.rcItem.top;
+                fieldOff = cbi.rcItem.top;
             }
-            SelectObject(dc, oldFont);
-            ReleaseDC(hwnd_, dc);
-        }
+            int comboTop = by + (bh - fieldH) / 2 - fieldOff;
+            if (comboTop < by) comboTop = by;
 
-        int labelCy = cy + (comboH - textH) / 2;
-        MoveWindow(langLabel_, pad, labelCy, labelW, textH, TRUE);
-        MoveWindow(langCombo_, pad + labelW + 8, cy, 200, 400, TRUE);
+            int labelW = 66;
+            {
+                HDC dc = GetDC(hwnd_);
+                HGDIOBJ oldFont = SelectObject(dc, font_);
+                SIZE sz = {0, 0};
+                if (GetTextExtentPoint32W(dc, L"目标语言:", 5, &sz) && sz.cx > 0)
+                    labelW = sz.cx + 6;
+                SelectObject(dc, oldFont);
+                ReleaseDC(hwnd_, dc);
+            }
+
+            hdwp = DeferWindowPos(hdwp, langLabel_, nullptr,
+                pad, by, labelW, bh, fl);
+            hdwp = DeferWindowPos(hdwp, langCombo_, nullptr,
+                pad + labelW + 8, comboTop, 200, 400, fl);
+        }
+        if (hdwp) EndDeferWindowPos(hdwp);
     }
 }
 
