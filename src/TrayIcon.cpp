@@ -107,7 +107,7 @@ void TrayIcon::showMenu()
         {
             if (g_modalDialogOpen.exchange(true)) break;
             const wchar_t* content =
-                L"CapturePlus v1.07\n\n"
+                L"CapturePlus v1.08\n\n"
                 L"Windows 截图增强工具。常驻通知栏，按快捷键呼出截图，框选后提供五项操作：\n\n"
                 L"  · 复制图片 — 选区位图复制到剪贴板\n"
                 L"  · 保存图片 — 保存为 PNG / JPEG / BMP\n"
