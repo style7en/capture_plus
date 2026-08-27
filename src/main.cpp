@@ -16,6 +16,7 @@ TrayIcon*         g_tray    = nullptr;
 HotkeyManager*    g_hotkey  = nullptr;
 ScreenshotSession* g_session = nullptr;
 HWND              g_mainHwnd = nullptr;
+std::atomic<bool> g_modalDialogOpen{ false };
 
 static void startScreenshot()
 {

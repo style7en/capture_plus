@@ -2,7 +2,16 @@
 #include "resource.h"
 #include "Logger.h"
 
+extern std::atomic<bool> g_modalDialogOpen;
+
 static const wchar_t* KC_TRAY = L"CapturePlus_TrayWnd";
+
+static HRESULT CALLBACK AboutCallback(HWND hwnd, UINT msg, WPARAM, LPARAM lp, LONG_PTR)
+{
+    if (msg == TDN_HYPERLINK_CLICKED && lp)
+        ShellExecuteW(hwnd, L"open", (LPCWSTR)lp, nullptr, nullptr, SW_SHOWNORMAL);
+    return S_OK;
+}
 
 TrayIcon::TrayIcon()
 {
@@ -94,18 +103,33 @@ void TrayIcon::showMenu()
     {
         case 1: if (onScreenshot_) onScreenshot_(); break;
         case 2: if (onSettings_)   onSettings_();   break;
-        case 3: MessageBoxW(nullptr,
-            L"CapturePlus v1.07\n\n"
-            L"Windows 截图增强工具。常驻通知栏，按快捷键呼出截图，框选后提供五项操作：\n\n"
-            L"  · 复制图片 — 选区位图复制到剪贴板\n"
-            L"  · 保存图片 — 保存为 PNG / JPEG / BMP\n"
-            L"  · 提取文字 — AI 视觉模型识别截图中的文字\n"
-            L"  · AI 分析  — 分析截图内容，图中含提问则直接作答\n"
-            L"  · 翻译     — 先 OCR 再翻译为目标语言\n\n"
-            L"支持 OpenAI 兼容接口（DeepSeek、通义千问、Ollama 等）。\n"
-            L"多显示器混合 DPI 自适应。\n\n"
-            L"联系邮箱：zhangjia_86@126.com", L"关于",
-            MB_OK | MB_ICONINFORMATION); break;
+        case 3:
+        {
+            if (g_modalDialogOpen.exchange(true)) break;
+            const wchar_t* content =
+                L"CapturePlus v1.07\n\n"
+                L"Windows 截图增强工具。常驻通知栏，按快捷键呼出截图，框选后提供五项操作：\n\n"
+                L"  · 复制图片 — 选区位图复制到剪贴板\n"
+                L"  · 保存图片 — 保存为 PNG / JPEG / BMP\n"
+                L"  · 提取文字 — AI 视觉模型识别截图中的文字\n"
+                L"  · AI 分析  — 分析截图内容，图中含提问则直接作答\n"
+                L"  · 翻译     — 先 OCR 再翻译为目标语言\n\n"
+                L"支持 OpenAI 兼容接口（DeepSeek、通义千问、Ollama 等）。\n"
+                L"多显示器混合 DPI 自适应。\n\n"
+                L"联系邮箱：zhangjia_86@126.com\n"
+                L"<a href=\"https://github.com/style7en/capture_plus\">GitHub 仓库</a>";
+            TASKDIALOGCONFIG cfg = { sizeof(cfg) };
+            cfg.hInstance = GetModuleHandleW(nullptr);
+            cfg.dwFlags = TDF_ENABLE_HYPERLINKS;
+            cfg.pszWindowTitle = L"关于";
+            cfg.pszMainIcon = MAKEINTRESOURCEW(IDI_APP);
+            cfg.pszContent = content;
+            cfg.pfCallback = AboutCallback;
+            cfg.dwCommonButtons = TDCBF_OK_BUTTON;
+            TaskDialogIndirect(&cfg, nullptr, nullptr, nullptr);
+            g_modalDialogOpen = false;
+            break;
+        }
         case 4: if (onExit_)       onExit_();       break;
     }
 }

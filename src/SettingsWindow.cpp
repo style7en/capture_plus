@@ -6,6 +6,8 @@
 #include "Util.h"
 #include "resource.h"
 
+extern std::atomic<bool> g_modalDialogOpen;
+
 static UINT_PTR g_hotkeySubclassId = 100;
 
 static HFONT g_dlgFont = nullptr;
@@ -135,9 +137,11 @@ static INT_PTR CALLBACK DlgProc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp)
 
 void OpenSettings(HWND parent, AppSettings& settings, HotkeyManager& hotkey, TrayIcon& tray)
 {
+    if (g_modalDialogOpen.exchange(true)) return;
     SettingsContext ctx{ &settings, &hotkey, &tray, 0, 0 };
     DialogBoxParamW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDR_SETTINGS_DIALOG),
                     parent, DlgProc, (LPARAM)&ctx);
+    g_modalDialogOpen = false;
 }
 
 void ShutdownSettingsFont()
