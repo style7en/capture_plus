@@ -210,6 +210,21 @@ ul, ol { padding-left: 2em; }
     return html;
 }
 
+bool OpenWithBrowser(const std::wstring& htmlPath)
+{
+    std::wstring quoted = L"\"" + htmlPath + L"\"";
+    static const wchar_t* const browsers[] = {
+        L"msedge.exe", L"chrome.exe", L"firefox.exe", L"iexplore.exe"
+    };
+    for (const wchar_t* b : browsers)
+    {
+        HINSTANCE r = ShellExecuteW(nullptr, L"open", b, quoted.c_str(),
+                                    nullptr, SW_SHOWNORMAL);
+        if ((intptr_t)r > 32) return true;
+    }
+    return false;
+}
+
 } // namespace
 
 bool OpenInBrowser(const std::wstring& markdownText, const std::string& imageBase64Png)
@@ -227,7 +242,7 @@ bool OpenInBrowser(const std::wstring& markdownText, const std::string& imageBas
 
     HINSTANCE r = ShellExecuteW(nullptr, L"open", viewPath.c_str(),
                                 nullptr, nullptr, SW_SHOWNORMAL);
-    if ((intptr_t)r <= 32)
+    if ((intptr_t)r <= 32 && !OpenWithBrowser(viewPath))
     {
         logger::error("mdpreview: ShellExecute failed, code " +
                       std::to_string((intptr_t)r));
