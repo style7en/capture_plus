@@ -72,6 +72,7 @@ void ScreenshotSession::showToolbar(double x, double y)
     }
     toolbar_->setActionCb([this](ScreenshotAction a) { onAction(a); });
     toolbar_->setCancelCb([this]() { closeAll(); });
+    overlay_->setDrawMode(true);
     toolbar_->show();
 }
 

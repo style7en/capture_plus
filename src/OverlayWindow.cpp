@@ -10,6 +10,40 @@ static bool s_classOk = false;
 
 static RECT toClientRect(const NormRect& r, int ox, int oy, int w, int h);
 
+static int dpiForScreenPoint(int px, int py)
+{
+    using GetDpiForMonitor_t = HRESULT(WINAPI*)(HMONITOR, int, UINT*, UINT*);
+    static GetDpiForMonitor_t fn = []() -> GetDpiForMonitor_t {
+        HMODULE shcore = LoadLibraryW(L"shcore.dll");
+        return shcore ? (GetDpiForMonitor_t)GetProcAddress(shcore, "GetDpiForMonitor") : nullptr;
+    }();
+    HMONITOR hmon = MonitorFromPoint({ px, py }, MONITOR_DEFAULTTONEAREST);
+    UINT x = 0, y = 0;
+    if (fn && hmon && SUCCEEDED(fn(hmon, 0, &x, &y)) && x > 0) return (int)x;
+    return 96;
+}
+
+static int annotPenWidth(int dpi)
+{
+    int w = 3 * dpi / 96;
+    return w < 2 ? 2 : w;
+}
+
+static void drawAnnotRect(Gdiplus::Graphics& g, const RECT& r, int dpi)
+{
+    int pw = annotPenWidth(dpi);
+    Gdiplus::Rect gr(r.left + pw / 2, r.top + pw / 2,
+                     (r.right - r.left) - pw, (r.bottom - r.top) - pw);
+    if (gr.Width < 1 || gr.Height < 1) return;
+    Gdiplus::Pen edge(Gdiplus::Color(255, 255, 0, 0), (Gdiplus::REAL)pw);
+    g.DrawRectangle(&edge, gr);
+}
+
+static RECT normalizeRect(int x1, int y1, int x2, int y2)
+{
+    return { (std::min)(x1, x2), (std::min)(y1, y2), (std::max)(x1, x2), (std::max)(y1, y2) };
+}
+
 static void ensureAssets()
 {
     if (s_whitePen) return;
@@ -68,7 +102,7 @@ bool OverlayWindow::create()
     }
 
     hwnd_ = CreateWindowExW(
-        WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
+        WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
         KC_OVERLAY, L"", WS_POPUP,
         originX_, originY_, width_, height_,
         nullptr, nullptr, GetModuleHandleW(nullptr), this);
@@ -133,28 +167,96 @@ LRESULT CALLBACK OverlayWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM l
             if (LOWORD(lp) == HTCLIENT) { SetCursor(s_crossCursor); return 1; }
             break;
 
+        case WM_MOUSEACTIVATE:
+            return MA_NOACTIVATE;
+
         case WM_LBUTTONDOWN:
             SetCapture(hwnd);
+            if (self->drawMode_)
+            {
+                self->drawing_ = true;
+                self->dragStartX_ = (short)LOWORD(lp);
+                self->dragStartY_ = (short)HIWORD(lp);
+                self->dragRect_ = { self->dragStartX_, self->dragStartY_,
+                                    self->dragStartX_, self->dragStartY_ };
+                self->invalidateRectArea(self->dragRect_);
+                return 0;
+            }
             if (self->inputCb_) self->inputCb_(InputPhase::Begin,
                 self->originX_ + (short)LOWORD(lp), self->originY_ + (short)HIWORD(lp));
             return 0;
 
         case WM_MOUSEMOVE:
+            if (self->drawMode_)
+            {
+                if (self->drawing_ && (wp & MK_LBUTTON))
+                {
+                    RECT old = self->dragRect_;
+                    self->dragRect_ = normalizeRect(self->dragStartX_, self->dragStartY_,
+                                                    (short)LOWORD(lp), (short)HIWORD(lp));
+                    if (self->hasSelection_)
+                    {
+                        RECT hole = toClientRect(self->selection_, self->originX_,
+                                                 self->originY_, self->width_, self->height_);
+                        RECT t = self->dragRect_;
+                        IntersectRect(&self->dragRect_, &t, &hole);
+                    }
+                    self->invalidateRectArea(old);
+                    self->invalidateRectArea(self->dragRect_);
+                }
+                return 0;
+            }
             if ((wp & MK_LBUTTON) && self->inputCb_)
                 self->inputCb_(InputPhase::Move,
                     self->originX_ + (short)LOWORD(lp), self->originY_ + (short)HIWORD(lp));
             return 0;
 
         case WM_LBUTTONUP:
+            if (self->drawMode_)
+            {
+                if (self->drawing_)
+                {
+                    self->drawing_ = false;
+                    if (GetCapture() == hwnd) ReleaseCapture();
+                    RECT r = self->dragRect_;
+                    self->dragRect_ = { 0, 0, 0, 0 };
+                    if (r.right - r.left >= 4 && r.bottom - r.top >= 4)
+                        self->rects_.push_back(r);
+                    else
+                        self->invalidateRectArea(r);
+                }
+                return 0;
+            }
             if (GetCapture() == hwnd) ReleaseCapture();
             if (self->inputCb_) self->inputCb_(InputPhase::End,
                 self->originX_ + (short)LOWORD(lp), self->originY_ + (short)HIWORD(lp));
             return 0;
 
         case WM_RBUTTONUP:
-        case WM_KEYDOWN:
-            if (msg == WM_KEYDOWN && wp != VK_ESCAPE) break;
+            if (self->drawMode_ && self->drawing_) return 0;
+            if (self->drawMode_ && !self->rects_.empty())
+            {
+                RECT r = self->rects_.back();
+                self->rects_.pop_back();
+                self->invalidateRectArea(r);
+                return 0;
+            }
             if (self->cancelCb_) self->cancelCb_();
+            return 0;
+
+        case WM_KEYDOWN:
+            if (wp != VK_ESCAPE) break;
+            if (self->cancelCb_) self->cancelCb_();
+            return 0;
+
+        case WM_CAPTURECHANGED:
+            if (self->drawing_)
+            {
+                self->drawing_ = false;
+                RECT r = self->dragRect_;
+                self->dragRect_ = { 0, 0, 0, 0 };
+                self->invalidateRectArea(r);
+            }
             return 0;
     }
     return DefWindowProcW(hwnd, msg, wp, lp);
@@ -191,6 +293,18 @@ void OverlayWindow::renderSelection(const NormRect* sel)
     if (dirty.top < 0) dirty.top = 0;
     if (dirty.right > width_) dirty.right = width_;
     if (dirty.bottom > height_) dirty.bottom = height_;
+    InvalidateRect(hwnd_, &dirty, FALSE);
+}
+
+void OverlayWindow::invalidateRectArea(const RECT& r)
+{
+    const int pad = 10;
+    RECT dirty = { r.left - pad, r.top - pad, r.right + pad, r.bottom + pad };
+    if (dirty.left < 0) dirty.left = 0;
+    if (dirty.top < 0) dirty.top = 0;
+    if (dirty.right > width_) dirty.right = width_;
+    if (dirty.bottom > height_) dirty.bottom = height_;
+    if (dirty.right <= dirty.left || dirty.bottom <= dirty.top) return;
     InvalidateRect(hwnd_, &dirty, FALSE);
 }
 
@@ -248,6 +362,17 @@ void OverlayWindow::onPaint(HDC hdc)
         SelectObject(hdc, oldPen);
         SelectObject(hdc, oldBrush);
     }
+
+    if (!rects_.empty() || drawing_)
+    {
+        Gdiplus::Graphics g(hdc);
+        for (const RECT& r : rects_)
+            drawAnnotRect(g, r, dpiForScreenPoint(originX_ + (r.left + r.right) / 2,
+                                                  originY_ + (r.top + r.bottom) / 2));
+        if (drawing_)
+            drawAnnotRect(g, dragRect_, dpiForScreenPoint(originX_ + (dragRect_.left + dragRect_.right) / 2,
+                                                          originY_ + (dragRect_.top + dragRect_.bottom) / 2));
+    }
 }
 
 HBITMAP OverlayWindow::captureRect(const NormRect& sel) const
@@ -261,7 +386,26 @@ HBITMAP OverlayWindow::captureRect(const NormRect& sel) const
     int h = ey - sy;
     if (w < 1) w = 1;
     if (h < 1) h = 1;
-    return gdiutil::CropBitmap(snapshot_, sx, sy, w, h);
+    HBITMAP bmp = gdiutil::CropBitmap(snapshot_, sx, sy, w, h);
+    if (bmp && !rects_.empty())
+    {
+        HDC screen = GetDC(nullptr);
+        HDC mem = CreateCompatibleDC(screen);
+        HBITMAP old = (HBITMAP)SelectObject(mem, bmp);
+        {
+            Gdiplus::Graphics g(mem);
+            for (const RECT& r : rects_)
+            {
+                RECT t = { r.left - sx, r.top - sy, r.right - sx, r.bottom - sy };
+                drawAnnotRect(g, t, dpiForScreenPoint(originX_ + (r.left + r.right) / 2,
+                                                      originY_ + (r.top + r.bottom) / 2));
+            }
+        }
+        SelectObject(mem, old);
+        DeleteDC(mem);
+        ReleaseDC(nullptr, screen);
+    }
+    return bmp;
 }
 
 void OverlayWindow::shutdown()

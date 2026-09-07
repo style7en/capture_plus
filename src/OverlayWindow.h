@@ -19,6 +19,7 @@ public:
 
     void setInputCb(InputCb cb)    { inputCb_ = std::move(cb); }
     void setCancelCb(CancelCb cb)  { cancelCb_ = std::move(cb); }
+    void setDrawMode(bool on)      { drawMode_ = on; }
 
     void renderSelection(const NormRect* sel);
     HBITMAP captureRect(const NormRect& sel) const;
@@ -28,6 +29,7 @@ public:
 
 private:
     void onPaint(HDC hdc);
+    void invalidateRectArea(const RECT& r);
 
     HWND hwnd_ = nullptr;
     int  originX_ = 0, originY_ = 0, width_ = 0, height_ = 0;
@@ -35,6 +37,12 @@ private:
     HBITMAP dimmed_  = nullptr;
     NormRect selection_;
     bool     hasSelection_ = false;
+
+    bool drawMode_ = false;
+    bool drawing_  = false;
+    int  dragStartX_ = 0, dragStartY_ = 0;
+    RECT dragRect_ = {};
+    std::vector<RECT> rects_;
 
     InputCb  inputCb_;
     CancelCb cancelCb_;
