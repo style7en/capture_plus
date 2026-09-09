@@ -4,6 +4,7 @@
 #include "GdiUtil.h"
 #include "Logger.h"
 #include "MarkdownPreview.h"
+#include "PromptBuilder.h"
 #include "Util.h"
 #include "resource.h"
 
@@ -400,6 +401,12 @@ void ResultWindow::onPreviewLink()
     GetWindowTextW(edit_, &txt[0], len + 1);
     txt.resize(len);
 
+    std::string question;
+    if (mode_ == Mode::Ocr)           question = prompts::aiOcr();
+    else if (mode_ == Mode::Ai)       question = prompts::aiAnalysis();
+    else                              question = "请将截图中的文字翻译成" +
+                                                 g_settings.translateTargetLanguage + "。";
+
     std::string imgB64;
     if (state_->bmp)
     {
@@ -407,7 +414,7 @@ void ResultWindow::onPreviewLink()
         catch (...) { imgB64.clear(); }
     }
 
-    if (!mdpreview::OpenInBrowser(txt, imgB64))
+    if (!mdpreview::OpenInBrowser(txt, imgB64, util::ToWide(question)))
         MessageBoxW(hwnd_, L"打开预览失败，请查看日志。", L"CapturePlus",
                     MB_OK | MB_ICONERROR);
 }
