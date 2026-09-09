@@ -101,6 +101,24 @@ bool OverlayWindow::create()
         }
     }
 
+    {
+        HDC screen = GetDC(nullptr);
+        HDC dc = CreateCompatibleDC(screen);
+        HBITMAP bmp = CreateCompatibleBitmap(screen, width_, height_);
+        ReleaseDC(nullptr, screen);
+        if (dc && bmp)
+        {
+            SelectObject(dc, bmp);
+            scratchDc_ = dc;
+            scratchBmp_ = bmp;
+        }
+        else
+        {
+            if (dc) DeleteDC(dc);
+            if (bmp) DeleteObject((HGDIOBJ)bmp);
+        }
+    }
+
     hwnd_ = CreateWindowExW(
         WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
         KC_OVERLAY, L"", WS_POPUP,
@@ -108,6 +126,11 @@ bool OverlayWindow::create()
         nullptr, nullptr, GetModuleHandleW(nullptr), this);
     if (!hwnd_) { logger::error("Overlay CreateWindow failed"); return false; }
     SetWindowLongPtrW(hwnd_, GWLP_USERDATA, (LONG_PTR)this);
+
+    RECT full = { 0, 0, width_, height_ };
+    HDC dc = GetDC(hwnd_);
+    onPaint(dc, full);
+    ReleaseDC(hwnd_, dc);
     return true;
 }
 
@@ -137,6 +160,16 @@ void OverlayWindow::close()
         DeleteObject((HGDIOBJ)dimmed_);
         dimmed_ = nullptr;
     }
+    if (scratchDc_)
+    {
+        DeleteDC(scratchDc_);
+        scratchDc_ = nullptr;
+    }
+    if (scratchBmp_)
+    {
+        DeleteObject((HGDIOBJ)scratchBmp_);
+        scratchBmp_ = nullptr;
+    }
 }
 
 static OverlayWindow* selfFromHwnd(HWND h)
@@ -158,7 +191,7 @@ LRESULT CALLBACK OverlayWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM l
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
-            self->onPaint(hdc);
+            self->onPaint(hdc, ps.rcPaint);
             EndPaint(hwnd, &ps);
             return 0;
         }
@@ -321,7 +354,7 @@ static RECT toClientRect(const NormRect& r, int ox, int oy, int w, int h)
     return { l, t, rr, bb };
 }
 
-void OverlayWindow::onPaint(HDC hdc)
+void OverlayWindow::onPaint(HDC hdc, const RECT& ur)
 {
     HBITMAP bg = dimmed_ ? dimmed_ : snapshot_;
     if (!bg)
@@ -331,6 +364,22 @@ void OverlayWindow::onPaint(HDC hdc)
         return;
     }
 
+    if (!scratchDc_)
+    {
+        HDC mem = CreateCompatibleDC(hdc);
+        HBITMAP old = (HBITMAP)SelectObject(mem, bg);
+        BitBlt(hdc, 0, 0, width_, height_, mem, 0, 0, SRCCOPY);
+        SelectObject(mem, old);
+        DeleteDC(mem);
+        return;
+    }
+
+    HDC s = scratchDc_;
+    HDC mem = CreateCompatibleDC(hdc);
+    HBITMAP old = (HBITMAP)SelectObject(mem, bg);
+    BitBlt(s, ur.left, ur.top, ur.right - ur.left, ur.bottom - ur.top,
+           mem, ur.left, ur.top, SRCCOPY);
+
     RECT hole = { 0, 0, 0, 0 };
     bool hasHole = false;
     if (hasSelection_)
@@ -338,34 +387,28 @@ void OverlayWindow::onPaint(HDC hdc)
         hole = toClientRect(selection_, originX_, originY_, width_, height_);
         hasHole = (hole.right > hole.left && hole.bottom > hole.top);
     }
-
-    HDC mem = CreateCompatibleDC(hdc);
-    HBITMAP old = (HBITMAP)SelectObject(mem, bg);
-    BitBlt(hdc, 0, 0, width_, height_, mem, 0, 0, SRCCOPY);
-
-    if (hasHole && snapshot_)
+    RECT hv;
+    if (hasHole && snapshot_ && IntersectRect(&hv, &ur, &hole))
     {
         SelectObject(mem, snapshot_);
-        BitBlt(hdc, hole.left, hole.top,
-               hole.right - hole.left, hole.bottom - hole.top,
-               mem, hole.left, hole.top, SRCCOPY);
+        BitBlt(s, hv.left, hv.top, hv.right - hv.left, hv.bottom - hv.top,
+               mem, hv.left, hv.top, SRCCOPY);
     }
-
     SelectObject(mem, old);
     DeleteDC(mem);
 
     if (hasHole)
     {
-        HGDIOBJ oldPen = SelectObject(hdc, s_whitePen);
-        HGDIOBJ oldBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH));
-        Rectangle(hdc, hole.left - 1, hole.top - 1, hole.right + 1, hole.bottom + 1);
-        SelectObject(hdc, oldPen);
-        SelectObject(hdc, oldBrush);
+        HGDIOBJ oldPen = SelectObject(s, s_whitePen);
+        HGDIOBJ oldBrush = SelectObject(s, GetStockObject(NULL_BRUSH));
+        Rectangle(s, hole.left - 1, hole.top - 1, hole.right + 1, hole.bottom + 1);
+        SelectObject(s, oldPen);
+        SelectObject(s, oldBrush);
     }
 
     if (!rects_.empty() || drawing_)
     {
-        Gdiplus::Graphics g(hdc);
+        Gdiplus::Graphics g(s);
         for (const RECT& r : rects_)
             drawAnnotRect(g, r, dpiForScreenPoint(originX_ + (r.left + r.right) / 2,
                                                   originY_ + (r.top + r.bottom) / 2));
@@ -373,6 +416,9 @@ void OverlayWindow::onPaint(HDC hdc)
             drawAnnotRect(g, dragRect_, dpiForScreenPoint(originX_ + (dragRect_.left + dragRect_.right) / 2,
                                                           originY_ + (dragRect_.top + dragRect_.bottom) / 2));
     }
+
+    BitBlt(hdc, ur.left, ur.top, ur.right - ur.left, ur.bottom - ur.top,
+           s, ur.left, ur.top, SRCCOPY);
 }
 
 HBITMAP OverlayWindow::captureRect(const NormRect& sel) const

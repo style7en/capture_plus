@@ -28,13 +28,15 @@ public:
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
 private:
-    void onPaint(HDC hdc);
+    void onPaint(HDC hdc, const RECT& ur);
     void invalidateRectArea(const RECT& r);
 
     HWND hwnd_ = nullptr;
     int  originX_ = 0, originY_ = 0, width_ = 0, height_ = 0;
     HBITMAP snapshot_ = nullptr;
     HBITMAP dimmed_  = nullptr;
+    HDC     scratchDc_  = nullptr;
+    HBITMAP scratchBmp_ = nullptr;
     NormRect selection_;
     bool     hasSelection_ = false;
 
