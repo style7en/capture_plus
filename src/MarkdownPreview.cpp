@@ -124,7 +124,18 @@ std::wstring BuildHtml(const std::wstring& markdown, const std::string& imageBas
     std::string keyB64 = util::Base64Encode(
         (const unsigned char*)g_settings.api.apiKey.data(),
         g_settings.api.apiKey.size());
-    std::wstring pid = std::to_wstring((long long)GetTickCount64());
+    std::wstring pid;
+    if (imageBase64Png.empty())
+    {
+        pid = std::to_wstring((long long)GetTickCount64());
+    }
+    else
+    {
+        unsigned long long h = 14695981039346656037ull;
+        for (unsigned char c : imageBase64Png) { h ^= c; h *= 1099511628211ull; }
+        static const wchar_t* kHex = L"0123456789abcdef";
+        for (int i = 15; i >= 0; --i) pid += kHex[(h >> (i * 4)) & 0xF];
+    }
 
     const wchar_t* tmpl = LR"HTML(<!DOCTYPE html>
 <html lang="zh-CN">
@@ -286,8 +297,15 @@ function renderMd(md, el) {
 
   var KEY = 'cpchat_' + CFG.pid;
   var history = [];
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(history)); } catch (e) {} }
-  function load() { try { var v = localStorage.getItem(KEY); if (v) history = JSON.parse(v) || []; } catch (e) { history = []; } }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify({ t: Date.now(), m: history })); } catch (e) {}
+  }
+  function load() {
+    try {
+      var v = localStorage.getItem(KEY);
+      if (v) { var o = JSON.parse(v); history = (o && o.m) || []; }
+    } catch (e) { history = []; }
+  }
   function prune() { try {
     var ks = [];
     for (var i = 0; i < localStorage.length; i++) {
@@ -295,8 +313,14 @@ function renderMd(md, el) {
       if (k && k.indexOf('cpchat_') === 0) ks.push(k);
     }
     if (ks.length <= 20) return;
-    ks.sort(function (a, b) { return (parseInt(b.slice(7), 10) || 0) - (parseInt(a.slice(7), 10) || 0); });
-    for (var j = 20; j < ks.length; j++) localStorage.removeItem(ks[j]);
+    var metas = [];
+    for (var j = 0; j < ks.length; j++) {
+      var t = 0;
+      try { var o = JSON.parse(localStorage.getItem(ks[j])); if (o && o.t) t = o.t; } catch (e) {}
+      metas.push({ k: ks[j], t: t });
+    }
+    metas.sort(function (a, b) { return b.t - a.t; });
+    for (var j2 = 20; j2 < metas.length; j2++) localStorage.removeItem(metas[j2].k);
   } catch (e) {} }
 
   function scrollBottom() { window.scrollTo(0, document.body.scrollHeight); }
@@ -396,7 +420,7 @@ function renderMd(md, el) {
   });
   clearBtn.addEventListener('click', function () {
     history = [];
-    save();
+    try { localStorage.removeItem(KEY); } catch (e) {}
     renderAll();
     ta.focus();
   });
