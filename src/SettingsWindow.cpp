@@ -83,6 +83,8 @@ static INT_PTR CALLBACK DlgProc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp)
                 util::ToWide(ctx->settings->api.visionModel).c_str());
             SetWindowTextW(GetDlgItem(dlg, IDC_TEXTMODEL_EDIT),
                 util::ToWide(ctx->settings->api.textModel).c_str());
+            SendDlgItemMessageW(dlg, IDC_TEXTMODEL_EDIT, EM_SETCUEBANNER, 0,
+                (LPARAM)L"（可选，不填则用多模态模型直接翻译）");
             SetDlgItemInt(dlg, IDC_TIMEOUT_EDIT,
                 (UINT)ctx->settings->api.receiveTimeoutSec, FALSE);
             return TRUE;
