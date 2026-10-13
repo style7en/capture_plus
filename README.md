@@ -51,6 +51,7 @@ make test       # 编译并运行单元测试
 | `Api.ApiKey` | API 密钥 | |
 | `Api.VisionModel` | 多模态模型 | `minimax` |
 | `Api.TextModel` | 文本模型 | `deepseek` |
+| `Api.ReceiveTimeoutMs` | AI 服务接收响应超时（毫秒） | `60000` |
 
 日志位于 `%APPDATA%\CapturePlus\logs\`。
 

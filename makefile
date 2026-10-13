@@ -33,10 +33,10 @@ clean:
 	rm -rf $(BUILDDIR)
 	rm -f tests.exe
 
-TEST_SRCS = tests/main.cpp src/Json.cpp src/Util.cpp src/Logger.cpp src/SelectionTracker.cpp src/HotkeyManager.cpp
+TEST_SRCS = tests/main.cpp src/Json.cpp src/Util.cpp src/Logger.cpp src/SelectionTracker.cpp src/HotkeyManager.cpp src/AppSettings.cpp
 TEST_LIBS = -luser32 -lshell32 -lole32 -luuid -lshlwapi
 
-tests.exe: $(TEST_SRCS) src/Pch.h src/Json.h src/Util.h src/Logger.h src/SelectionTracker.h src/HotkeyManager.h
+tests.exe: $(TEST_SRCS) src/Pch.h src/Json.h src/Util.h src/Logger.h src/SelectionTracker.h src/HotkeyManager.h src/AppSettings.h
 	$(CXX) -std=c++17 -O2 -Wall -I. -Isrc -Ires $(TEST_SRCS) -o tests.exe $(TEST_LIBS)
 
 test: tests.exe

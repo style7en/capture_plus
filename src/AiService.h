@@ -21,5 +21,6 @@ private:
     static std::string httpPost(const std::string& host, int port,
                                 const std::string& path, bool https,
                                 const std::string& headers,
-                                const std::string& body);
+                                const std::string& body,
+                                int receiveTimeoutMs);
 };

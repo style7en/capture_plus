@@ -3,6 +3,7 @@
 #include "Util.h"
 #include "SelectionTracker.h"
 #include "HotkeyManager.h"
+#include "AppSettings.h"
 
 static int g_failures = 0;
 static int g_tests = 0;
@@ -155,12 +156,24 @@ static void testHotkey()
     CHECK(!HotkeyParse("Ctrl+XYZ", mods, vk));
 }
 
+static void testReceiveTimeout()
+{
+    CHECK(NormalizeReceiveTimeoutMs(60000) == 60000);
+    CHECK(NormalizeReceiveTimeoutMs(0) == 60000);
+    CHECK(NormalizeReceiveTimeoutMs(-5) == 60000);
+    CHECK(NormalizeReceiveTimeoutMs(500) == 1000);
+    CHECK(NormalizeReceiveTimeoutMs(700000) == 600000);
+    CHECK(ApiSettings().receiveTimeoutMs == 60000);
+    CHECK(AppSettings().api.receiveTimeoutMs == 60000);
+}
+
 int main()
 {
     testJson();
     testUtil();
     testSelection();
     testHotkey();
+    testReceiveTimeout();
 
     printf("\n%d tests, %d failures\n", g_tests, g_failures);
     return g_failures == 0 ? 0 : 1;

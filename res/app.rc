@@ -32,12 +32,12 @@ IDR_KTX_FONT_SIZE3_REG   RCDATA                 "web/fonts/KaTeX_Size3-Regular.w
 IDR_KTX_FONT_SIZE4_REG   RCDATA                 "web/fonts/KaTeX_Size4-Regular.woff2"
 IDR_KTX_FONT_TYPEWRITER_REG RCDATA              "web/fonts/KaTeX_Typewriter-Regular.woff2"
 
-IDR_SETTINGS_DIALOG DIALOGEX 0, 0, 300, 164
+IDR_SETTINGS_DIALOG DIALOGEX 0, 0, 300, 184
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "设置"
 FONT 9, "Microsoft YaHei"
 BEGIN
-    GROUPBOX        "AI 服务 (OpenAI 兼容)",  -1,                   10, 8,   280, 88
+    GROUPBOX        "AI 服务 (OpenAI 兼容)",  -1,                   10, 8,   280, 110
     LTEXT           "BaseUrl:",                -1,                   20, 22,  55,  8
     EDITTEXT                                    IDC_BASEURL_EDIT,    80, 20,  200, 11, ES_AUTOHSCROLL
     LTEXT           "ApiKey:",                 -1,                   20, 40,  55,  8
@@ -48,11 +48,14 @@ BEGIN
     LTEXT           "文本模型:",               -1,                   20, 76,  55,  8
     EDITTEXT                                    IDC_TEXTMODEL_EDIT,   80, 74,  200, 11, ES_AUTOHSCROLL
     LTEXT           "（可选，不填则用多模态模型直接翻译）", -1,         80, 87,  200, 8
+    LTEXT           "接收超时(ms):",           -1,                   20, 98,  70,  8
+    EDITTEXT                                    IDC_TIMEOUT_EDIT,     95, 96,  60,  11, ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "(留空=60000，范围1000-600000)", -1,              158, 98,  132, 8
 
-    LTEXT           "截图快捷键:",              -1,                   10, 112, 70,  8
-    EDITTEXT                                    IDC_HOTKEY_EDIT,      80, 110, 130, 11, ES_AUTOHSCROLL | ES_READONLY
-    LTEXT           "(点击后按下新组合键)",      -1,                   215, 112, 75, 8
+    LTEXT           "截图快捷键:",              -1,                   10, 130, 70,  8
+    EDITTEXT                                    IDC_HOTKEY_EDIT,      80, 128, 130, 11, ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "(点击后按下新组合键)",      -1,                   215, 130, 75, 8
 
-    DEFPUSHBUTTON   "确定",                    IDC_SETTINGS_OK,      145, 138,  50,  14
-    PUSHBUTTON      "取消",                    IDC_SETTINGS_CANCEL,  205, 138,  50,  14
+    DEFPUSHBUTTON   "确定",                    IDC_SETTINGS_OK,      145, 156,  50,  14
+    PUSHBUTTON      "取消",                    IDC_SETTINGS_CANCEL,  205, 156,  50,  14
 END

@@ -73,11 +73,15 @@ static AppSettings fromJson(const json::Value& v)
         if (auto p = api->find("ApiKey"))       if (p->isString()) s.api.apiKey = p->asString();
         if (auto p = api->find("VisionModel"))  if (p->isString()) s.api.visionModel = p->asString();
         if (auto p = api->find("TextModel"))    if (p->isString()) s.api.textModel = p->asString();
+        if (auto p = api->find("ReceiveTimeoutMs"))
+            if (p->type() == json::Value::Number)
+                s.api.receiveTimeoutMs = NormalizeReceiveTimeoutMs((int)p->asNumber());
     }
     if (s.hotkey.empty())                   s.hotkey = def.hotkey;
     if (s.api.baseUrl.empty())              s.api.baseUrl = def.api.baseUrl;
     if (s.api.visionModel.empty())          s.api.visionModel = def.api.visionModel;
     if (s.translateTargetLanguage.empty())  s.translateTargetLanguage = def.translateTargetLanguage;
+    s.api.receiveTimeoutMs = NormalizeReceiveTimeoutMs(s.api.receiveTimeoutMs);
     return s;
 }
 
@@ -90,6 +94,7 @@ static json::Value toJson(const AppSettings& s)
     api.set("ApiKey", s.api.apiKey);
     api.set("VisionModel", s.api.visionModel);
     api.set("TextModel", s.api.textModel);
+    api.set("ReceiveTimeoutMs", s.api.receiveTimeoutMs);
     root.set("Api", std::move(api));
     root.set("TranslateTargetLanguage", s.translateTargetLanguage);
     return root;
@@ -104,6 +109,15 @@ static const std::vector<std::wstring> kTranslateLanguages = {
 const std::vector<std::wstring>& TranslateLanguageList()
 {
     return kTranslateLanguages;
+}
+
+int NormalizeReceiveTimeoutMs(int ms)
+{
+    const int def = ApiSettings().receiveTimeoutMs;
+    if (ms <= 0) return def;
+    if (ms < 1000) return 1000;
+    if (ms > 600000) return 600000;
+    return ms;
 }
 
 AppSettings LoadSettings()

@@ -99,7 +99,8 @@ std::string AiService::sendTextImpl(const json::Value& req, const AppSettings& s
     if (!s.api.apiKey.empty())
         headers += "Authorization: Bearer " + s.api.apiKey + "\r\n";
 
-    std::string resp = httpPost(host, port, path + "/chat/completions", https, headers, body);
+    std::string resp = httpPost(host, port, path + "/chat/completions", https, headers, body,
+                                s.api.receiveTimeoutMs);
 
     json::Value root;
     if (!json::parse(resp, root))
@@ -121,7 +122,8 @@ std::string AiService::sendTextImpl(const json::Value& req, const AppSettings& s
 std::string AiService::httpPost(const std::string& host, int port,
                                const std::string& path, bool https,
                                const std::string& headers,
-                               const std::string& body)
+                               const std::string& body,
+                               int receiveTimeoutMs)
 {
     std::wstring whost = util::ToWide(host);
     std::wstring wpath = util::ToWide(path);
@@ -137,7 +139,8 @@ std::string AiService::httpPost(const std::string& host, int port,
         WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!hSession) throw std::runtime_error("WinHttpOpen failed");
 
-    WinHttpSetTimeouts(hSession, 10000, 10000, 10000, 30000);
+    WinHttpSetTimeouts(hSession, 10000, 10000, 10000,
+                       (DWORD)(receiveTimeoutMs > 0 ? receiveTimeoutMs : 60000));
 
     hConnect = WinHttpConnect(hSession, whost.c_str(),
         (port ? port : (https ? INTERNET_DEFAULT_HTTPS_PORT : INTERNET_DEFAULT_HTTP_PORT)), 0);
