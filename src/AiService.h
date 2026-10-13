@@ -22,5 +22,5 @@ private:
                                 const std::string& path, bool https,
                                 const std::string& headers,
                                 const std::string& body,
-                                int receiveTimeoutMs);
+                                int receiveTimeoutSec);
 };

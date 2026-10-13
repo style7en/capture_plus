@@ -84,7 +84,7 @@ static INT_PTR CALLBACK DlgProc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp)
             SetWindowTextW(GetDlgItem(dlg, IDC_TEXTMODEL_EDIT),
                 util::ToWide(ctx->settings->api.textModel).c_str());
             SetDlgItemInt(dlg, IDC_TIMEOUT_EDIT,
-                (UINT)ctx->settings->api.receiveTimeoutMs, FALSE);
+                (UINT)ctx->settings->api.receiveTimeoutSec, FALSE);
             return TRUE;
         }
         case WM_COMMAND:
@@ -115,8 +115,8 @@ static INT_PTR CALLBACK DlgProc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp)
                     ctx->settings->api.textModel   = getEdit(IDC_TEXTMODEL_EDIT);
                     BOOL tmoTranslated = FALSE;
                     UINT tmo = GetDlgItemInt(dlg, IDC_TIMEOUT_EDIT, &tmoTranslated, FALSE);
-                    ctx->settings->api.receiveTimeoutMs =
-                        NormalizeReceiveTimeoutMs(tmoTranslated ? (int)tmo : 0);
+                    ctx->settings->api.receiveTimeoutSec =
+                        NormalizeReceiveTimeoutSec(tmoTranslated ? (int)tmo : 0);
 
                     SaveSettings(*ctx->settings);
                     if (ctx->hotkey && !ctx->hotkey->reRegister(ctx->settings->hotkey))

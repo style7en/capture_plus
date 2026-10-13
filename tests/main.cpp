@@ -158,13 +158,13 @@ static void testHotkey()
 
 static void testReceiveTimeout()
 {
-    CHECK(NormalizeReceiveTimeoutMs(60000) == 60000);
-    CHECK(NormalizeReceiveTimeoutMs(0) == 60000);
-    CHECK(NormalizeReceiveTimeoutMs(-5) == 60000);
-    CHECK(NormalizeReceiveTimeoutMs(500) == 1000);
-    CHECK(NormalizeReceiveTimeoutMs(700000) == 600000);
-    CHECK(ApiSettings().receiveTimeoutMs == 60000);
-    CHECK(AppSettings().api.receiveTimeoutMs == 60000);
+    CHECK(NormalizeReceiveTimeoutSec(60) == 60);
+    CHECK(NormalizeReceiveTimeoutSec(0) == 60);
+    CHECK(NormalizeReceiveTimeoutSec(-5) == 60);
+    CHECK(NormalizeReceiveTimeoutSec(1) == 1);
+    CHECK(NormalizeReceiveTimeoutSec(700) == 600);
+    CHECK(ApiSettings().receiveTimeoutSec == 60);
+    CHECK(AppSettings().api.receiveTimeoutSec == 60);
 }
 
 int main()
